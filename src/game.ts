@@ -89,6 +89,17 @@ export class Game implements HubApi {
     const unlock = () => this.audio.unlock();
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
+
+    // Esc releases pointer lock (the browser consumes that key), so losing it is the pause signal.
+    document.addEventListener('pointerlockchange', () => {
+      if (this.state === 'round' && !this.input.pointerLocked && !this.pauseMenu) this.pause();
+    });
+
+    // A round whose first lock request was refused can capture the mouse on the next click.
+    canvas.addEventListener('pointerdown', () => {
+      if (this.state === 'round' && !this.pauseMenu) this.input.lock();
+    });
+
     // pagehide (not beforeunload) also fires on mobile and keeps the page eligible for bfcache.
     window.addEventListener('pagehide', () => this.persist());
     this.store.watchOtherTabs(() => this.pause(true));
@@ -182,8 +193,15 @@ export class Game implements HubApi {
     pauseThumbs(st === 'round');
   }
 
+  /** Hides the desktop pointer while a round runs; Esc (pause), results and the hub bring it back. */
+  private setCursorHidden(hidden: boolean): void {
+    document.body.classList.toggle('cursor-hidden', hidden);
+  }
+
   private enterHub(): void {
     this.resume();
+    this.input.unlock();
+    this.setCursorHidden(false);
     this.setState('hub');
     this.input.enabled = false;
     this.input.reset();
@@ -221,6 +239,7 @@ export class Game implements HubApi {
     this.audio.unlock();
     this.audio.click();
     this.setState('round');
+    this.setCursorHidden(true);
     this.hub.show(false);
     const cfg = eco.buildRoundConfig(this.save);
     this.world = new World(generateMap(this.save.selectedMap), cfg, { seed: devFlags.seed ?? (Date.now() & 0xffffff) + 1 });
@@ -228,6 +247,7 @@ export class Game implements HubApi {
     this.hud.setup(this.world);
     this.hud.show(true);
     this.input.enabled = true;
+    this.input.lock();
     this.fx.newRound();
     const first = this.save.stats.rounds === 0;
     this.hud.banner(first ? 'EAT!' : 'GO!', first ? 'Swallow anything smaller than the hole' : eco.mapDef(cfg.mapId).name);
@@ -245,6 +265,8 @@ export class Game implements HubApi {
   pause(silent = false): void {
     const w = this.world;
     if (this.state !== 'round' || this.pauseMenu || !w || !w.running) return;
+    this.input.unlock();
+    this.setCursorHidden(false);
     this.input.enabled = false;
     this.input.reset();
     if (!silent) this.audio.click();
@@ -270,6 +292,8 @@ export class Game implements HubApi {
     menu.close();
     if (this.state === 'round') {
       this.input.enabled = true;
+      this.setCursorHidden(true);
+      this.input.lock();
       this.audio.setMusicMode('round');
     }
   }
@@ -288,6 +312,8 @@ export class Game implements HubApi {
   private endRound(): void {
     const w = this.world!;
     this.setState('results');
+    this.input.unlock();
+    this.setCursorHidden(false);
     this.input.enabled = false;
     this.input.reset();
     const r = settleRound(this.save, summarizeRound(w));
@@ -316,6 +342,12 @@ export class Game implements HubApi {
 
   private crash(err: unknown): void {
     this.crashed = true;
+    try {
+      this.input.unlock();
+    } catch {
+      // Never let cleanup stop the error screen.
+    }
+    this.setCursorHidden(false);
     let saved = false;
     try {
       saved = this.persist();

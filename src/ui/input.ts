@@ -14,6 +14,7 @@ export class Input {
   private pad: Gamepad | null = null;
   private padDown: boolean[] = [];
   private mouse: { x: number; y: number } | null = null;
+  private readonly surface: HTMLElement;
   private touchId: number | null = null;
   private touchOrigin = { x: 0, y: 0 };
   private touchCur = { x: 0, y: 0 };
@@ -26,6 +27,7 @@ export class Input {
   onPadButton: ((button: number) => void) | null = null;
 
   constructor(surface: HTMLElement) {
+    this.surface = surface;
     this.joy = document.createElement('div');
     this.joy.className = 'joystick';
     this.knob = document.createElement('div');
@@ -53,12 +55,26 @@ export class Input {
     });
 
     surface.addEventListener('pointermove', (e) => {
-      if (e.pointerType === 'mouse') this.mouse = { x: e.clientX, y: e.clientY };
+      if (this.pointerLocked) {
+        // Under pointer lock the cursor is fixed, so build a virtual position from relative moves.
+        const m = this.mouse ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        this.mouse = {
+          x: Math.min(window.innerWidth, Math.max(0, m.x + e.movementX)),
+          y: Math.min(window.innerHeight, Math.max(0, m.y + e.movementY)),
+        };
+      } else if (e.pointerType === 'mouse') {
+        this.mouse = { x: e.clientX, y: e.clientY };
+      }
+    });
+    document.addEventListener('pointerlockchange', () => {
+      if (this.pointerLocked) this.mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     });
     surface.addEventListener('pointerleave', (e) => {
-      if (e.pointerType === 'mouse') this.mouse = null;
+      if (e.pointerType === 'mouse' && !this.pointerLocked) this.mouse = null;
     });
-    document.addEventListener('mouseleave', () => (this.mouse = null));
+    document.addEventListener('mouseleave', () => {
+      if (!this.pointerLocked) this.mouse = null;
+    });
 
     surface.addEventListener(
       'touchstart',
@@ -96,6 +112,30 @@ export class Input {
     };
     surface.addEventListener('touchend', end);
     surface.addEventListener('touchcancel', end);
+  }
+
+  /** True while the pointer is captured by the game surface. */
+  get pointerLocked(): boolean {
+    return document.pointerLockElement === this.surface;
+  }
+
+  /**
+   * Captures the mouse on desktop so it cannot leave the game (Esc releases it). Steering then
+   * uses relative moves against a virtual cursor clamped to the viewport. Silently does nothing
+   * where pointer lock is unsupported or blocked, e.g. an iframe without allow="pointer-lock".
+   */
+  lock(): void {
+    if (this.pointerLocked || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    try {
+      const request = this.surface.requestPointerLock() as Promise<void> | void;
+      if (request) request.catch(() => {});
+    } catch {
+      // No pointer lock: the CSS cursor hiding still applies.
+    }
+  }
+
+  unlock(): void {
+    if (this.pointerLocked) document.exitPointerLock();
   }
 
   private joyRadius(): number {

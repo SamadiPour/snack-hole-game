@@ -39,6 +39,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1033; fon
 #ui button { font-family: inherit; touch-action: manipulation; }
 #ui .ab-btn { touch-action: none; }
 #ui :focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+/* A live round hides the pointer; Esc pauses and brings it back. Touch screens have no pointer. */
+@media (hover: hover) and (pointer: fine) {
+  body.cursor-hidden, body.cursor-hidden * { cursor: none !important; }
+}
 .modal:focus, .tab-content:focus { outline: none; }
 .hidden { display: none !important; }
 
