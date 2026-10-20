@@ -30,7 +30,7 @@ void main() {
 }
 `;
 
-/** CPU-simulated additive sparkle particles (swallow bursts, level-up rings). */
+/** CPU-simulated additive sparkle particles (swallow bursts, level-up rings, big-swallow spirals). */
 export class Particles {
   readonly points: THREE.Points;
   private pos = new Float32Array(MAX * 3);
@@ -42,6 +42,17 @@ export class Particles {
   private maxLife = new Float32Array(MAX);
   private baseSize = new Float32Array(MAX);
   private grav = new Float32Array(MAX);
+  /**
+   * Swirl particles (spiral) ride polar coordinates around the attractor instead of flying
+   * straight: radius (in hole radii), angle and orbit speed (rad/s at the rim; 0 = ordinary particle).
+   */
+  private orbU = new Float32Array(MAX);
+  private orbA = new Float32Array(MAX);
+  private orbW = new Float32Array(MAX);
+  /** The main hole (centre and radius), moved by the renderer every frame. */
+  private ax = 0;
+  private az = 0;
+  private ar = 1;
   private next = 0;
   private mat: THREE.ShaderMaterial;
   /** Parsed colours by the value emit was given (a handful of skin and effect colours). */
@@ -82,7 +93,14 @@ export class Particles {
     this.mat.uniforms.uScale.value = h * 0.9;
   }
 
-  emit(x: number, y: number, z: number, vx: number, vy: number, vz: number, color: string | number, size: number, life: number, gravity = 0): void {
+  setAttractor(x: number, z: number, r: number): void {
+    this.ax = x;
+    this.az = z;
+    this.ar = r;
+  }
+
+  /** Returns the particle's slot. */
+  emit(x: number, y: number, z: number, vx: number, vy: number, vz: number, color: string | number, size: number, life: number, gravity = 0): number {
     const i = this.next;
     this.next = (this.next + 1) % MAX;
     this.pos[i * 3] = x;
@@ -104,7 +122,44 @@ export class Particles {
     this.life[i] = life;
     this.maxLife[i] = life;
     this.grav[i] = gravity;
+    this.orbW[i] = 0;
     this.emitted = true;
+    return i;
+  }
+
+  /**
+   * Debris spiralling into the main hole like an accretion disk: it orbits faster as it closes in,
+   * then drops down the throat. `power` (0..1) sets how much there is and how far out it starts.
+   */
+  spiral(colors: readonly (string | number)[], power: number): void {
+    const r = this.ar;
+    const n = Math.round(8 + power * 10);
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2;
+      // Starts just outside the rim, so the show stays on the hole.
+      const u = 1.05 + Math.random() * (0.25 + power * 0.25);
+      const x = this.ax + Math.cos(a) * u * r;
+      const z = this.az + Math.sin(a) * u * r;
+      const i = this.emit(x, 0.1 + Math.random() * (0.2 + r * 0.1), z, 0, 0, 0, colors[k % colors.length], (0.2 + Math.random() * 0.25) * (0.6 + r * 0.3), 0.8 + Math.random() * 0.4);
+      this.orbU[i] = u;
+      this.orbA[i] = a;
+      this.orbW[i] = 3.5 + Math.random() * 2;
+    }
+  }
+
+  /**
+   * One step of a swirl particle: infall speeds up toward the rim, orbit speed rises like a
+   * Kepler orbit (u^-1.5), and once over the hole it drops in.
+   */
+  private orbit(i: number, dt: number): void {
+    const u0 = this.orbU[i];
+    const u = Math.max(0.05, u0 - (1.2 + 1.5 / Math.max(u0, 0.3)) * dt);
+    this.orbU[i] = u;
+    const a = this.orbA[i] + (this.orbW[i] / Math.pow(Math.max(u, 0.3), 1.5)) * dt;
+    this.orbA[i] = a;
+    this.pos[i * 3] = this.ax + Math.cos(a) * u * this.ar;
+    this.pos[i * 3 + 2] = this.az + Math.sin(a) * u * this.ar;
+    if (u < 1) this.vel[i * 3 + 1] -= (10 + 4 * this.ar) * dt;
   }
 
   /** Burst of sparkles rising out of the hole when something is swallowed. */
@@ -156,6 +211,7 @@ export class Particles {
       this.pos[i * 3] += this.vel[i * 3] * dt;
       this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
       this.pos[i * 3 + 2] += this.vel[i * 3 + 2] * dt;
+      if (this.orbW[i] > 0) this.orbit(i, dt);
       this.alpha[i] = Math.min(1, t * 2);
       this.size[i] = this.baseSize[i] * (0.4 + 0.6 * t);
     }

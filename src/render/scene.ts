@@ -226,6 +226,18 @@ export class GameRenderer {
     if (full) this.particles.ringBurst(h.x, h.z, h.r * 1.2, '#ffffff');
   }
 
+  /**
+   * The main hole swallowed something big (`power` 0..1): debris in the skin and prop colours
+   * spirals in and the vortex spins up.
+   */
+  gulp(world: World, power: number, debris: string | number): void {
+    const h = world.main;
+    this.particles.setAttractor(h.x, h.z, h.r);
+    this.particles.spiral([this.skin.glow, debris], power);
+    const v = this.holeViews[0];
+    if (v) v.spin = Math.max(v.spin, 0.55 + 0.45 * power);
+  }
+
   shake(amount: number): void {
     this.shakeAmt = Math.min(1.5, Math.max(this.shakeAmt, amount));
   }
@@ -271,6 +283,7 @@ export class GameRenderer {
       for (let i = n; i < this.holeViews.length; i++) this.holeViews[i].group.visible = false;
       holeUniforms.uFadeDepth.value = Math.max(2, world.main.r * 1.6);
       holeUniforms.uTime.value = this.time;
+      this.particles.setAttractor(world.main.x, world.main.z, world.main.r);
       this.updateCamera(dt, world, mode);
       this.updateDash(dt, world);
       this.updateGoldAndEvents(dt, world);

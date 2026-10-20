@@ -3,6 +3,9 @@ import type { SkinDef } from '../config/balance';
 
 /** Pulse decay rate (1/s): -ln(0.92) * 60. */
 const PULSE_DECAY = 5;
+/** Vortex spin-up after a big swallow: decay rate (1/s) and extra swirl speed at full spin. */
+const SPIN_DECAY = 2.5;
+const SPIN_BOOST = 8;
 
 const SWIRL_MODE: Record<SkinDef['swirl'], number> = { none: 0, spiral: 1, rings: 2, stars: 3, galaxy: 4 };
 
@@ -19,6 +22,7 @@ uniform vec3 uRim;
 uniform vec3 uSwirl;
 uniform float uTime;
 uniform float uMode;
+uniform float uSpin;
 varying vec3 vLocal;
 void main() {
   float t = clamp(0.5 - vLocal.y, 0.0, 1.0);
@@ -27,6 +31,8 @@ void main() {
   vec3 top = mix(uSwirl * 0.9, uRim * 0.55, 0.35);
   vec3 col = mix(top, vec3(0.0), pow(t, 0.45));
   col += uSwirl * stripes * (1.0 - t) * 0.35 * step(0.5, uMode);
+  // Spin-up: bright streaks race down the throat, on every skin.
+  col += mix(uSwirl, uRim, 0.6) * pow(stripes, 3.0) * pow(1.0 - t, 1.5) * 0.9 * uSpin;
   col += uRim * smoothstep(0.06, 0.0, t) * 0.5;
   gl_FragColor = vec4(col, 1.0);
 }
@@ -37,6 +43,7 @@ uniform vec3 uRim;
 uniform vec3 uSwirl;
 uniform float uTime;
 uniform float uMode;
+uniform float uSpin;
 varying vec2 vUv;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
 void main() {
@@ -58,7 +65,9 @@ void main() {
   } else if (uMode > 0.5) {
     v = smoothstep(0.35, 1.0, sin(a * 3.0 + r * 12.0 - uTime * 3.5)) * (1.0 - r);
   }
-  vec3 col = uSwirl * v * 1.4 + uRim * v * 0.25;
+  vec3 col = (uSwirl * v * 1.4 + uRim * v * 0.25) * (1.0 + uSpin);
+  // Spin-up: the core flares as the swallowed prop hits the singularity.
+  col += mix(uRim, vec3(1.0), 0.35) * pow(max(0.0, 1.0 - r * 1.6), 3.0) * uSpin;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -99,9 +108,15 @@ export class HoleView {
     uTime: { value: 0 },
     uMode: { value: 1 },
     uPulse: { value: 0 },
+    uSpin: { value: 0 },
   };
   private rimMat: THREE.MeshBasicMaterial;
   pulse = 0;
+  /** Vortex spin-up (0..1): the swirl races and the throat lights up, then eases back. */
+  spin = 0;
+  /** Swirl animation clock: scene time, run faster while spinning up. */
+  private swirlT = 0;
+  private lastTime = 0;
 
   constructor(skin: SkinDef, private helper = false) {
     const u = this.uniforms;
@@ -161,7 +176,7 @@ export class HoleView {
     this.rimMat.color.set(skin.rim);
   }
 
-  /** `dt` (real frame seconds) eases the pulse back down. */
+  /** `dt` (real frame seconds) eases the pulse and spin back down. */
   update(x: number, z: number, r: number, time: number, visible = true, dt = 1 / 60): void {
     this.group.visible = visible && r > 0.01;
     const depth = r * 2.2 + 1.5;
@@ -173,10 +188,15 @@ export class HoleView {
     this.rim.scale.set(r, 1, r);
     this.glow.position.set(x, 0.015, z);
     this.glow.scale.set(r, 1, r);
-    this.uniforms.uTime.value = time;
     // Same decay as the old 0.92 per frame at 60 Hz, independent of frame rate.
     this.pulse *= Math.exp(-PULSE_DECAY * dt);
     this.uniforms.uPulse.value = Math.min(1, this.pulse);
+    this.spin *= Math.exp(-SPIN_DECAY * dt);
+    this.uniforms.uSpin.value = Math.min(1, this.spin);
+    const step = Math.min(0.1, Math.max(0, time - this.lastTime));
+    this.lastTime = time;
+    this.swirlT += step * (1 + SPIN_BOOST * Math.min(1, this.spin));
+    this.uniforms.uTime.value = this.swirlT;
   }
 
   dispose(): void {

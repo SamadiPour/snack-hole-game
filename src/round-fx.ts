@@ -6,6 +6,7 @@ import { formatCash } from './core/format';
 import type { RoundSettlement } from './core/round';
 import type { SaveData } from './core/save';
 import type { EventId, World, WObj } from './core/world';
+import { fxOn } from './dev/flags';
 import { reducedMotion } from './render/motion';
 import type { GameRenderer } from './render/scene';
 import { cachedThumb, thumbFor } from './render/thumbs';
@@ -18,6 +19,13 @@ export type GameState = 'hub' | 'round' | 'results';
 
 /** Seconds of landmark slow-motion. */
 const SLOWMO = 1.1;
+/**
+ * A main-hole swallow counts as big (black-hole gulp effects) from this footprint, as a fraction
+ * of the biggest that fits; effects reach full strength at the size limit.
+ */
+const BIG_GULP = 0.6;
+/** Minimum ms between gulp effects, so a herd of big props does not stack them. */
+const GULP_GAP = 250;
 
 const EVENT_TEXT: Record<EventId, [string, string]> = {
   rush: ['🚗 RUSH HOUR!', 'Traffic is pouring in'],
@@ -49,6 +57,8 @@ export class RoundFeedback {
   private slowmo = 0;
   private landmarkCd = 0;
   private landmarkBannerUntil = 0;
+  /** performance.now() of the last gulp effect. */
+  private lastGulp = -Infinity;
   /** Prop types first swallowed this round (the save's Gulpedia only counts them when it ends). */
   private readonly roundDiscoveries = new Set<number>();
 
@@ -132,6 +142,7 @@ export class RoundFeedback {
           const hole = w.holes[e.hole];
           const big = e.o.f >= 3;
           renderer.particles.swallowBurst(hole.x, hole.z, hole.r, e.hole === 0 ? renderer.skinColor : '#a8f0ff', Math.round(3 + e.o.f * 3), big);
+          if (e.hole === 0) this.maybeGulp(w, e.o);
           if (!inRound) break;
           audio.gulp(e.o.f);
           if (e.hole === 0) {
@@ -282,6 +293,16 @@ export class RoundFeedback {
     renderer.landmarkBurst(w, o.f, false);
     this.shake(0.5);
     audio.landmark(o.f, false);
+  }
+
+  /** Black-hole effects for a big swallow by the main hole (the falling prop spaghettifies on its own). */
+  private maybeGulp(w: World, o: WObj): void {
+    if (!fxOn.gulp) return;
+    const rel = o.f / (SIZE.fit * w.main.r);
+    const now = performance.now();
+    if (rel < BIG_GULP || now - this.lastGulp < GULP_GAP) return;
+    this.lastGulp = now;
+    this.d.renderer.gulp(w, Math.min(1, (rel - BIG_GULP) / (1 - BIG_GULP)), o.gold ? '#ffd23d' : o.tint);
   }
 
   /** Names of prop types that just became edible at this level (for the level-up banner). */

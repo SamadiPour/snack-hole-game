@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SIZE } from '../config/balance';
 import { OBJECT_TYPES } from '../config/objects';
 import { ALIVE, DORMANT, FALLING, GONE, MV_NONE, type World, type WObj } from '../core/world';
+import { fxOn } from '../dev/flags';
 import { createGhostMaterial, createPropMaterial } from './materials';
 import { BUILDERS } from './props';
 
@@ -21,6 +22,7 @@ export function geometryFor(t: number): THREE.BufferGeometry {
 }
 
 const _m = new THREE.Matrix4();
+const _w = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _qy = new THREE.Quaternion();
 const _qt = new THREE.Quaternion();
@@ -48,6 +50,37 @@ interface Ghost {
 }
 
 const depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, depthWrite: true });
+
+/** Spaghettification at strength 1: length factor, width factor and spin (rad/s per s of fall). */
+const SPAG_STRETCH = 2.4;
+const SPAG_THIN = 0.45;
+const SPAG_TWIST = 7;
+/**
+ * Strongest a prop gets (a tractor's worth), and the most length the stretch may add, in hole
+ * radii: beyond these, big and tall props (trucks, trees) look broken rather than pulled in.
+ */
+const SPAG_MAX = 0.6;
+const SPAG_REACH = 0.7;
+/**
+ * Props that would stick out of the hole if they tipped over swirl down at a SWIRL_LEAN lean
+ * instead: tall and thin (height at least SWIRL_TALL x footprint) and taller than the hole's
+ * radius (trees and silos at the size they first fit; never people, who drop in easily). The lean
+ * turns SWIRL_SPEED rad/s at first, speeding up as they fall.
+ */
+const SWIRL_TALL = 2;
+const SWIRL_LEAN = (30 * Math.PI) / 180;
+const SWIRL_SPEED = 5;
+
+/**
+ * How strongly a falling prop is spaghettified (0..SPAG_MAX). Grows with the prop's size relative
+ * to its hole, so small snacks barely change, and tops out at a tractor's worth. Ramps in over the
+ * first moments of the fall.
+ */
+function spaghetti(o: WObj, r: number): number {
+  if (!fxOn.spaghetti) return 0;
+  const rel = o.f / (SIZE.fit * r);
+  return Math.min(SPAG_MAX, Math.max(0, (rel - 0.2) / 0.7)) * Math.min(1, o.ft / 0.45);
+}
 
 function meshKey(o: WObj): number {
   return o.t * 2 + (o.gold ? 1 : 0);
@@ -116,9 +149,29 @@ export class ObjectsView {
     }
     _qy.setFromAxisAngle(_up, o.rot);
     let y = o.y;
+    let spag = 0;
+    let tilt = 0;
     if (o.state === FALLING) {
-      _axis.set(o.tdz, 0, -o.tdx).normalize();
-      _qt.setFromAxisAngle(_axis, o.tilt);
+      const r = this.world!.holes[o.hole].r;
+      spag = spaghetti(o, r);
+      tilt = o.tilt;
+      let yaw = o.rot + spag * o.ft * SPAG_TWIST;
+      let tdx = o.tdx;
+      let tdz = o.tdz;
+      if (fxOn.spaghetti && o.h >= SWIRL_TALL * o.f && o.h > r) {
+        // Tall props swirl down the drain instead of tipping over: a slight lean whose direction
+        // turns around the hole (the same way as the wall's swirl), the prop turning with it.
+        const a = o.ft * (SWIRL_SPEED + SWIRL_SPEED * o.ft);
+        const c = Math.cos(a);
+        const s = Math.sin(a);
+        tdx = o.tdx * c - o.tdz * s;
+        tdz = o.tdx * s + o.tdz * c;
+        yaw -= a;
+        tilt = Math.min(tilt, SWIRL_LEAN);
+      }
+      _qy.setFromAxisAngle(_up, yaw);
+      _axis.set(tdz, 0, -tdx).normalize();
+      _qt.setFromAxisAngle(_axis, tilt);
       _q.multiplyQuaternions(_qt, _qy);
     } else if (o.wob > 0.01) {
       // Too big to fit: rock on the rim.
@@ -140,6 +193,18 @@ export class ObjectsView {
     _p.set(o.x, y, o.z);
     _s.set(o.s, o.s, o.s);
     _m.compose(_p, _q, _s);
+    if (spag > 0.001) {
+      // World-space stretch: the top stays put while the body pulls down toward the bottom of
+      // the hole, squeezed in toward the hole's axis. The pivot sits at (or above) the prop's
+      // highest point, so nothing is pushed up: a tipped-over tower would poke out of the ground.
+      const hole = this.world!.holes[o.hole];
+      const stretch = 1 + Math.min(SPAG_STRETCH * spag, (SPAG_REACH * hole.r) / o.h);
+      const thin = 1 - SPAG_THIN * spag;
+      // Footprint is 0.85 x the half diagonal.
+      const top = y + o.h * Math.cos(tilt) + 1.2 * o.f * Math.sin(tilt);
+      _w.makeScale(thin, stretch, thin).setPosition(hole.x * (1 - thin), top * (1 - stretch), hole.z * (1 - thin));
+      _m.premultiply(_w);
+    }
     const ghost = this.ghosts.get(o);
     if (ghost) {
       ghost.color.matrix.copy(_m);
