@@ -20,6 +20,8 @@ const PADS = [
   { x: 82, z: 66 },
 ];
 const HALL = { x: -55, z: -5 };
+/** Astrovan stripe colour (its stripe is tinted; untinted it would be white on silver). */
+const VAN_STRIPE = 0x3b82f6;
 
 export function generateSpaceport(seed: number): MapData {
   const size = 300;
@@ -68,8 +70,10 @@ export function generateSpaceport(seed: number): MapData {
     b.circle(p.x, p.z, 27, '#c9c8c2');
     b.ring(p.x, p.z, 25, 26, '#f5c542');
     b.rect(p.x, p.z, 44, 7, '#55585e');
-    b.put('moonrocket', p.x, p.z, 0, { force: true, scale: i === 0 ? 1 : 0.9 });
-    b.put('launchtower', p.x - 14, p.z, 0, { force: true });
+    const s = i === 0 ? 1 : 0.9;
+    b.put('moonrocket', p.x, p.z, 0, { force: true, scale: s });
+    // Tower beside the rocket: its swing arms (5 m out from its centre) touch the body (radius 4.6 m).
+    b.put('launchtower', p.x - 5 - 4.6 * s, p.z, 0, { force: true });
     for (const q of ringPoints(6, p.x, p.z, 31)) b.put('lamp', q.x, q.z, 0, { force: true, scale: 2.4 });
     // Fuel farm on the inland side: big spheres and smaller ones.
     const side = i === 0 ? -1 : 1;
@@ -111,8 +115,8 @@ export function generateSpaceport(seed: number): MapData {
   b.reserveArea({ x0: -66, x1: 86, z0: STRIP_Z - 9, z1: STRIP_Z + 9 });
   b.put('shuttle', 15, -104, 0, { force: true });
   b.put('stairtruck', 22, -94, faceDir(0, -1), { force: true });
-  b.put('astrovan', -2, -88, 0, { force: true });
-  b.put('astrovan', 8, -86, 0, { force: true, scale: 1.2 });
+  b.put('astrovan', -2, -88, 0, { force: true, tint: VAN_STRIPE });
+  b.put('astrovan', 8, -86, 0, { force: true, scale: 1.2, tint: VAN_STRIPE });
 
   // ---------------------------------------------------------------- rocket garden (start)
   const START = { x: 0, z: 42 };
@@ -182,7 +186,7 @@ export function generateSpaceport(seed: number): MapData {
   ]);
   const lane = 1.8;
   b.traffic = { graph: grid.graph, lane, speed: 9, types: ['astrovan', 'car', 'car', 'bus'] };
-  for (let i = 0; i < 6; i++) b.graphMover('astrovan', grid.graph, lane, 8);
+  for (let i = 0; i < 6; i++) b.graphMover('astrovan', grid.graph, lane, 8, { tint: VAN_STRIPE });
   for (let i = 0; i < 8; i++) b.graphMover('car', grid.graph, lane, 9, { tint: b.tint(PALETTE.car) });
   for (let i = 0; i < 3; i++) b.graphMover('bus', grid.graph, lane, 6.5);
   for (let i = 0; i < 16; i++) b.graphMover('person', grid.graph, rng.sign() * (hw + 1.2), 1.4, { flee: true, tint: b.tint(PALETTE.shirt) });
@@ -191,7 +195,7 @@ export function generateSpaceport(seed: number): MapData {
   // ---------------------------------------------------------------- scrub
   b.scatter('cryotank', land, 5, { scale: [0.6, 0.95] });
   b.scatter('rocketstage', land, 4, { scale: [0.65, 0.95] });
-  b.scatter('astrovan', land, 10, { scale: [1, 1.35] });
+  b.scatter('astrovan', land, 10, { scale: [1, 1.35], tint: () => VAN_STRIPE });
   b.scatter('capsule', land, 8, { scale: [0.8, 1.4] });
   b.scatter('rocketengine', land, 16, { scale: [0.8, 1.6] });
   b.scatter('buggy', land, 16, { tint: () => b.tint([0xffffff, 0xf5c542, 0x3b82f6]) });

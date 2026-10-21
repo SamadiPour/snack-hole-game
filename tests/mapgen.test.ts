@@ -29,7 +29,7 @@ const PINNED: Record<MapId, string> = {
   farm: 'c4970a1a',
   harbor: '2eedbd16',
   airport: 'ecf080b7',
-  spaceport: 'e8a952db',
+  spaceport: 'b87769ab',
   moon: 'a0480040',
 };
 

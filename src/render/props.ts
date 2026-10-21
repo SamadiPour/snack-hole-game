@@ -838,7 +838,8 @@ export const BUILDERS: Record<string, Builder> = {
       .cylB(0.21, 0.21, 0.04, 0, 0, 0, C.yellow, 12, { tint: true })
       .boxB(0.1, 0.03, 0.24, 0.18, 0, 0, C.yellow, { tint: true })
       .dome(0.16, 0, 0.04, 0, C.yellow, 12, 5, { tint: true })
-      .box(0.3, 0.05, 0.05, 0, 0.19, 0, C.yellow, { tint: true })
+      // Ridge front to back: a thin slice of a slightly bigger dome, so it follows the crown.
+      .dome(0.175, 0, 0.04, 0, C.yellow, 12, 5, { sz: 0.3, tint: true })
       .build(),
   engineer: () => person(C.white, { hat: C.yellow, tint: true }),
   satellite: () => {
@@ -847,7 +848,8 @@ export const BUILDERS: Record<string, Builder> = {
     g.boxB(0.5, 0.5, 0.5, 0, 0.3, 0, C.gold);
     // Solar wings out along X on short struts.
     for (const s of [-1, 1]) g.box(0.2, 0.04, 0.04, s * 0.35, 0.55, 0, C.lightgrey).box(0.34, 0.03, 0.9, s * 0.61, 0.55, 0, 0x22337a);
-    g.cone(0.22, 0.12, 0, 0.92, 0, C.white, 10, { rx: Math.PI }).cylB(0.02, 0.02, 0.3, 0, 0.86, 0, C.dark, 4);
+    // Dish on top, its point set into the body, and the feed rod standing in it.
+    g.cone(0.22, 0.12, 0, 0.84, 0, C.white, 10, { rx: Math.PI }).cylB(0.02, 0.02, 0.36, 0, 0.8, 0, C.dark, 4);
     return g.build();
   },
   gator: () => {
@@ -877,18 +879,25 @@ export const BUILDERS: Record<string, Builder> = {
     g.boxB(0.5, 0.45, 1.2, -0.1, 0.65, 0, C.navy).boxB(0.15, 0.6, 1.2, -0.35, 0.65, 0, C.navy).boxB(0.6, 0.4, 1.2, -0.85, 0.65, 0, C.grey);
     for (const x of [-0.95, 0.75]) for (const z of [-0.6, 0.6]) g.cylB(0.04, 0.04, 0.95, x, 0.65, z, C.dark, 4);
     g.boxB(2.2, 0.08, 1.4, -0.1, 1.6, 0, C.white, { tint: true });
-    g.box(0.05, 0.5, 1.2, 0.95, 1.25, 0, C.glass, { rz: -0.2 });
+    // Windshield from the hood up to the roof, leaning back.
+    g.box(0.05, 0.6, 1.2, 0.8, 1.3, 0, C.glass, { rz: 0.15 });
     for (const x of [-0.8, 0.8]) for (const z of [-0.6, 0.6]) g.wheel(0.27, 0.2, x, 0.27, z);
     return g.build();
   },
   rocketengine: () => {
     const g = new G();
     g.boxB(2.2, 0.3, 2.2, 0, 0, 0, C.yellow);
-    for (const x of [-0.9, 0.9]) for (const z of [-0.9, 0.9]) g.cylB(0.07, 0.07, 1.0, x, 0.3, z, C.dark, 6);
+    // Stand: a post at each corner with an arm reaching in to hold the bell.
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      g.cylB(0.07, 0.07, 1.0, Math.cos(a) * 1.27, 0.3, Math.sin(a) * 1.27, C.dark, 6);
+      g.box(0.7, 0.12, 0.12, Math.cos(a) * 0.96, 1.24, Math.sin(a) * 0.96, C.dark, { ry: -a });
+    }
     // Bell (wide end down), throat, then the turbopump and its feed pipes on top.
     g.cylB(0.38, 1.0, 1.7, 0, 0.45, 0, C.dark, 16).cylB(1.03, 1.03, 0.1, 0, 0.45, 0, C.steel, 16);
     g.cylB(0.45, 0.38, 0.5, 0, 2.15, 0, C.steel, 12).cylB(0.6, 0.6, 0.35, 0, 2.65, 0, C.gold, 12);
-    for (const z of [-0.45, 0.45]) g.cylB(0.12, 0.12, 0.9, 0.55, 1.75, z, C.lightgrey, 6);
+    // Feed pipes from the pump down into the top of the bell.
+    for (const z of [-0.36, 0.36]) g.cylB(0.12, 0.12, 0.9, 0.42, 1.75, z, C.lightgrey, 6);
     return g.build();
   },
   capsule: () => {
@@ -907,7 +916,8 @@ export const BUILDERS: Record<string, Builder> = {
     g.cyl(1.15, 1.15, 5.8, 0, 2.35, 0, silver, 14, { rz: Math.PI / 2, sx: 0.5 });
     g.box(5.9, 0.3, 2.32, 0, 1.0, 0, C.blue, { tint: true }).box(4.4, 0.55, 2.33, -0.5, 1.75, 0, C.glassDark);
     g.box(0.06, 0.7, 1.9, 3.02, 1.8, 0, C.glass).box(0.06, 0.18, 0.4, 3.02, 0.9, -0.75, C.lamp).box(0.06, 0.18, 0.4, 3.02, 0.9, 0.75, C.lamp);
-    for (const x of [-2.0, 2.0]) for (const z of [-1.0, 1.0]) g.wheel(0.45, 0.3, x, 0.45, z);
+    // Wheels stand a little proud of the body sides (flush caps would z-fight with them).
+    for (const x of [-2.0, 2.0]) for (const z of [-1.05, 1.05]) g.wheel(0.45, 0.3, x, 0.45, z);
     return g.build();
   },
   cryotank: () => {
@@ -925,7 +935,7 @@ export const BUILDERS: Record<string, Builder> = {
     const g = new G();
     // Stage lying on a transporter: flatbed, wheels, two cradles, then the stage along X.
     g.boxB(19.4, 0.5, 3.6, 0, 0.3, 0, C.dark);
-    for (const x of [-8, -6.6, 6.6, 8]) for (const z of [-1.6, 1.6]) g.wheel(0.4, 0.4, x, 0.4, z);
+    for (const x of [-8, -6.6, 6.6, 8]) for (const z of [-1.7, 1.7]) g.wheel(0.4, 0.4, x, 0.4, z);
     for (const x of [-5, 5]) g.boxB(1.0, 1.0, 4.4, x, 0.8, 0, C.yellow);
     g.cyl(2.1, 2.1, 16.5, 0.6, 2.9, 0, C.white, 16, { rz: Math.PI / 2 });
     for (const x of [-4, 3]) g.cyl(2.13, 2.13, 1.2, x, 2.9, 0, C.dark, 16, { rz: Math.PI / 2 });
@@ -952,7 +962,9 @@ export const BUILDERS: Record<string, Builder> = {
   telescope: () => {
     const g = new G();
     g.cylB(4, 4.5, 3, 0, 0, 0, C.offwhite, 12).cylB(2.5, 2.5, 3, 0, 3, 0, C.lightgrey, 10);
-    for (const z of [-3.5, 3.5]) g.boxB(1.2, 6, 1.2, 0, 6, z, C.offwhite);
+    // Yoke: a cross beam on the pedestal carrying the two arms.
+    g.boxB(1.6, 1.0, 8.2, 0, 6, 0, C.offwhite);
+    for (const z of [-3.5, 3.5]) g.boxB(1.2, 5, 1.2, 0, 7, z, C.offwhite);
     g.box(1.6, 1.6, 8.2, 0, 12, 0, C.steel);
     // Dish tilted up toward +X, with the receiver held out over its centre.
     g.cone(8.6, 3.6, 0.8, 12, 0, C.white, 20, { rz: Math.PI / 2 + 0.6 });
@@ -984,24 +996,28 @@ export const BUILDERS: Record<string, Builder> = {
     // Rooftop dishes and a mast.
     for (const [x, z] of [[9, 5], [12, -6]]) g.cylB(0.15, 0.15, 1.2, x, 7, z, C.grey, 6).cone(1.5, 0.8, x, 8.4, z, C.white, 12, { rx: Math.PI });
     g.cylB(0.15, 0.15, 1.5, -8, 10.5, 0, C.dark, 6);
-    g.boxB(2, 0.3, 8, 16, 3, 0, C.blue);
+    // Entrance on the front (+X): glass doors under a blue canopy.
+    g.boxB(0.2, 2.1, 4, 17.02, 0, 0, C.glassDark).boxB(1.2, 0.3, 8, 17.6, 3, 0, C.blue);
     return g.build();
   },
   shuttle: () => {
     const g = new G();
     const fy = 4.5;
-    // Fuselage, nose cone with a black tip, and the black belly.
+    // Fuselage, nose cone with a black tip, and the black belly: a shell over the lower sides,
+    // its facets lined up with the fuselage's just outside them.
     g.cyl(2.6, 2.6, 25, -1.5, fy, 0, C.white, 14, { rz: Math.PI / 2 });
     g.cone(2.6, 6, 14, fy, 0, C.white, 14, { rz: -Math.PI / 2 }).cone(1.05, 2.4, 15.8, fy, 0, C.black, 14, { rz: -Math.PI / 2 });
-    g.box(24, 0.6, 4.6, -1.5, fy - 2.4, 0, C.black);
+    const seg = (Math.PI * 2) / 14;
+    g.add(new THREE.CylinderGeometry(2.65, 2.65, 25, 5, 1, true, 8 * seg, 5 * seg), C.black, -1.5, fy, 0, { rz: Math.PI / 2 });
     // Delta wing under the fuselage, black underneath.
     g.bow(20, 0.6, 24, -14, fy - 1.6, 0, C.white).bow(20, 0.2, 24, -14, fy - 1.8, 0, C.black);
     g.wedge(7, 10, 0.6, -10.5, fy + 2.4, 0, C.white);
     for (const z of [-1.6, 1.6]) g.cyl(1.0, 1.0, 6, -11, fy + 1.8, z, C.offwhite, 10, { rz: Math.PI / 2 });
     for (const [y, z] of [[fy + 1.2, 0], [fy - 0.6, -1.0], [fy - 0.6, 1.0]]) g.cone(0.9, 1.8, -14.9, y, z, C.dark, 10, { rz: -Math.PI / 2 });
-    g.box(1.2, 0.5, 2.4, 11.8, fy + 2.1, 0, C.glassDark, { rz: -0.4 }).box(14, 0.08, 0.1, -2, fy + 2.6, 0, C.lightgrey);
-    // Landing gear: nose leg and two main legs.
-    for (const [x, z] of [[10, 0], [-4, -3], [-4, 3]]) g.cylB(0.15, 0.15, fy - 2.4, x, 0, z, C.dark, 6).wheel(0.5, 0.4, x, 0.5, z);
+    // Cockpit windows hugging the top of the nose, then the payload bay seam.
+    g.box(1.2, 0.5, 1.6, 11.8, fy + 1.98, 0, C.glassDark, { rz: -0.4 }).box(14, 0.08, 0.1, -2, fy + 2.6, 0, C.lightgrey);
+    // Landing gear: nose leg up into the fuselage, main legs up to the underside of the wing.
+    for (const [x, z, h] of [[10, 0, fy - 2.4], [-4, -3, fy - 1.8], [-4, 3, fy - 1.8]]) g.cylB(0.15, 0.15, h, x, 0, z, C.dark, 6).wheel(0.5, 0.4, x, 0.5, z);
     return g.build();
   },
   crawler: () => {
