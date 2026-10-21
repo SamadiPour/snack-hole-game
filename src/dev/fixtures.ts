@@ -32,6 +32,47 @@ const FIXTURES: Record<string, (s: SaveData) => void> = {
     s.skins.push('mint');
   },
   /**
+   * Calibration (`?log`): early game on the farm, about 15 minutes in. Starts at farm size 5 with
+   * a few cheap upgrades, one helper and Dash; no cash, so every round plays the same upgrades.
+   */
+  'calib-farm': (s) => {
+    s.stats.rounds = 12;
+    s.runCash = s.lifetimeCash = 3e4;
+    Object.assign(s.upgrades, { startSize: 12, speed: 2, cashValue: 3, roundTime: 1, growth: 2, magnet: 2, combo: 1 });
+    s.helpers = 1;
+    s.helperLevel = 1;
+    s.abilities.dash = 1;
+    s.maps.farm = true;
+    s.mapLevel.suburb = 16;
+    s.selectedMap = 'farm';
+    for (const id of ['cone', 'hydrant', 'person', 'car', 'tree', 'bench', 'bush', 'flower']) s.gulpedia[id] = 10;
+    s.achievements.push('firstBite', 'eat100', 'car', 'size10');
+    s.flags.tab_upgrades = s.flags.tab_helpers = s.flags.tab_abilities = true;
+  },
+  /**
+   * Calibration (`?log`): second run on Harbor after one Singularity, with every ability and a
+   * mid-level shop. Starts at harbor size 11; no cash.
+   */
+  'calib-harbor': (s) => {
+    s.stats.rounds = 40;
+    s.stats.prestiges = 1;
+    s.runCash = 2e8;
+    s.lifetimeCash = 3e8;
+    s.dm = 0;
+    s.dmTotal = s.dmClaimed = 14;
+    Object.assign(s.dmUpgrades, { denseCore: 2, eventHorizon: 1, gravityWell: 1 });
+    Object.assign(s.upgrades, { startSize: 30, speed: 6, cashValue: 7, roundTime: 3, growth: 5, magnet: 6, combo: 4, golden: 2 });
+    s.helpers = 3;
+    s.helperLevel = 6;
+    Object.assign(s.abilities, { dash: 3, vortex: 2, mega: 1 });
+    Object.assign(s.maps, { farm: true, downtown: true, harbor: true });
+    Object.assign(s.mapLevel, { suburb: 20, farm: 22, downtown: 26 });
+    s.selectedMap = 'harbor';
+    for (const t of OBJECT_TYPES) if (['street', 'nature', 'people', 'park', 'vehicles', 'farm'].includes(t.set)) s.gulpedia[t.id] = 20;
+    checkAchievements(s);
+    for (const id of ['upgrades', 'helpers', 'abilities', 'maps', 'singularity']) s.flags[`tab_${id}`] = true;
+  },
+  /**
    * Endless tiers: tier 12 (past PRESTIGE.tierSizeCap), every Dark Matter upgrade maxed but Dense
    * Core (10 of 20, with DM for two more levels), Wormhole keeping all maps, Moon Base selected and
    * one size short of its goal (tier 13 on the next collapse).

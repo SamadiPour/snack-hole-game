@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import type { Plugin } from 'vite';
 
@@ -49,8 +49,41 @@ function pwa(): Plugin {
   };
 }
 
+/**
+ * Dev server only: appends each round the `?log` calibration logger posts (src/dev/roundLog.ts) as
+ * one JSON line to balance/calibration/rounds.jsonl, where the balance tools read it.
+ */
+function balanceLog(): Plugin {
+  return {
+    name: 'snack-hole-balance-log',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__balance/log', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+        let body = '';
+        req.on('data', (chunk) => (body += chunk));
+        req.on('end', () => {
+          try {
+            const line = JSON.stringify(JSON.parse(body));
+            mkdirSync('balance/calibration', { recursive: true });
+            appendFileSync('balance/calibration/rounds.jsonl', `${line}\n`);
+            res.statusCode = 204;
+          } catch {
+            res.statusCode = 400;
+          }
+          res.end();
+        });
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [pwa()],
+  plugins: [pwa(), balanceLog()],
   // Only this repo's tests (not copies in git worktrees under .claude/).
   test: { include: ['tests/**/*.test.ts'] },
   server: { port: 5101, strictPort: true },

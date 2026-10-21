@@ -1,4 +1,5 @@
 import './ui/styles.css';
+import { devFlags } from './dev/flags';
 import { Game } from './game';
 import { registerServiceWorker } from './pwa';
 import { showFatal } from './ui/fatal';
@@ -26,6 +27,7 @@ if (!hasWebGL2()) {
     game.start();
     // Handle for smoke tests and the debug panel; not exposed in release builds.
     if (import.meta.env.DEV) (window as unknown as { game: Game }).game = game;
+    if (import.meta.env.DEV && devFlags.log) void import('./dev/roundLog').then((m) => m.startRoundLog(game));
   } catch (err) {
     console.error(err);
     showFatal('Snack Hole could not start', `Something went wrong while loading the game: ${err instanceof Error ? err.message : String(err)}`);
