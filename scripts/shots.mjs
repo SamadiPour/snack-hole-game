@@ -6,7 +6,7 @@ import { devServer } from './devServer.mjs';
 const server = await devServer();
 const [sizeArg, ...only] = process.argv.slice(2);
 const size = Number(sizeArg ?? 10);
-const maps = only.length ? only : ['suburb', 'downtown', 'farm', 'harbor', 'airport', 'moon'];
+const maps = only.length ? only : ['suburb', 'downtown', 'farm', 'harbor', 'airport', 'spaceport', 'moon'];
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const errors = [];

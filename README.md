@@ -36,7 +36,7 @@ Gamepads work too: stick or d-pad steers, A / X / Y for abilities, Start pauses.
 
 ## Features
 
-- 6 procedural maps with traffic, animals and events; 106 prop types
+- 7 procedural maps with traffic, animals and events; 124 prop types
 - Timed rounds with combos, golden props, landmarks and an early finish when you run out of snacks
 - Upgrades, helper holes, abilities, Singularity prestige with endless tiers, skins
 - Gulpedia collection and 42 trophies

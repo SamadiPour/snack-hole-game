@@ -166,13 +166,15 @@ is selected). Later maps also need Singularities.
 | Downtown | Farm goal | 26 | 31 | 50 | 16 | 0.63 |
 | Harbor | Downtown goal | 24 | 30 | 233 | 24 | 0.49 |
 | Airport | Harbor goal + 1 Singularity | 28 | 35 | 870 | 26 | 0.94 |
-| Moon Base | Airport goal + 3 Singularities | 25 | 30 | 1,080 | 32 | 0.81 |
+| Spaceport | Airport goal + 2 Singularities | 29 | 36 | 970 | 29 | 0.87 |
+| Moon Base | Spaceport goal + 3 Singularities | 25 | 30 | 1,080 | 32 | 0.81 |
 
 Goals, size offsets, XP and value multipliers were tuned with the simulators in `balance/`
 (CMA-ES over simulated playthroughs; `balance/tuned/finalist.json`, report in
 `balance/reports/`). Goals sit below each map's XP ceiling: Harbor and Moon Base used to need the
 last props of a full clear, which stalled most players a size short. Value multipliers rise map
-by map, since prices follow them. Every map tracks
+by map, since prices follow them. The Spaceport, added later, sits between Airport and Moon Base
+and unlocks with 2 Singularities (`balance/notes/spaceport.md`). Every map tracks
 its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
 
 ## Singularity (prestige)
@@ -213,9 +215,9 @@ Singularity (recent income starts low again). Time with the tab hidden counts th
 
 ## Gulpedia & trophies
 
-- Gulpedia: all 106 prop types with 3D thumbnails, discovered on first swallow, lifetime counts.
-  10 sets (Street, Nature, People & Pets, Park, Vehicles, Buildings, Farm, Harbor, Airport, Moon);
-  each completed set gives +5% cash.
+- Gulpedia: all 124 prop types with 3D thumbnails, discovered on first swallow, lifetime counts.
+  11 sets (Street, Nature, People & Pets, Park, Vehicles, Buildings, Farm, Harbor, Airport,
+  Spaceport, Moon); each completed set gives +5% cash.
 - 42 trophies, each +2% cash; seven also unlock skins (four of them for Singularity tiers).
 
 ## Pacing (from `npm run sim -- --human --runs 6 --seeds 1-10`, and `--good`)
@@ -285,7 +287,7 @@ about 3h 15m): playtesting decides which is closer.
 
 ```
 src/
-  config/      balance.ts (economy numbers), objects.ts (prop catalogue: 106 types)
+  config/      balance.ts (economy numbers), objects.ts (prop catalogue: 124 types)
   core/        pure logic, no DOM/three — runs headless in tests and the sim
     format.ts      number formatting (K, M, B, T, Qa, Qi, scientific)
     economy.ts     costs, effects, map unlocks, map max sizes, offline, prestige and tiers,

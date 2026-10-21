@@ -15,6 +15,7 @@ export type GulpSet =
   | 'farm'
   | 'harbor'
   | 'airport'
+  | 'spaceport'
   | 'moon';
 
 export interface ObjTypeDef {
@@ -157,6 +158,26 @@ export const OBJECT_TYPES: ObjTypeDef[] = [
   T('terminal', 'Terminal', 50.0, 22.0, 14.0, 'airport', { valueMul: 1.5, solid: 'box', landmark: true }),
   T('jumbo', 'Jumbo Jet', 45.0, 44.0, 13.0, 'airport', { valueMul: 1.5, landmark: true }),
 
+  // Spaceport
+  T('hardhat', 'Hard Hat', 0.45, 0.4, 0.3, 'spaceport'),
+  T('engineer', 'Engineer', 0.5, 0.45, 1.8, 'spaceport'),
+  T('satellite', 'Satellite', 1.6, 1.0, 1.2, 'spaceport', { valueMul: 1.5 }),
+  T('gator', 'Alligator', 2.6, 0.8, 0.5, 'spaceport'),
+  T('balloon', 'Weather Balloon', 2.0, 2.0, 6.0, 'spaceport'),
+  T('buggy', 'Crew Buggy', 2.6, 1.4, 1.7, 'spaceport'),
+  T('rocketengine', 'Rocket Engine', 2.2, 2.2, 3.0, 'spaceport', { valueMul: 1.5 }),
+  T('capsule', 'Space Capsule', 3.6, 3.6, 3.2, 'spaceport', { valueMul: 1.5, solid: 'round' }),
+  T('astrovan', 'Astrovan', 6.2, 2.4, 3.0, 'spaceport', { solid: 'box' }),
+  T('cryotank', 'Fuel Sphere', 9.0, 9.0, 10.0, 'spaceport', { solid: 'round', landmark: true }),
+  T('rocketstage', 'Rocket Stage', 20.0, 4.6, 5.0, 'spaceport', { solid: 'box', landmark: true }),
+  T('launchtower', 'Launch Tower', 10.0, 10.0, 60.0, 'spaceport', { solid: 'box', landmark: true }),
+  T('telescope', 'Radio Telescope', 18.0, 18.0, 20.0, 'spaceport', { landmark: true }),
+  T('moonrocket', 'Moon Rocket', 12.0, 12.0, 115.0, 'spaceport', { solid: 'round', landmark: true }),
+  T('missioncontrol', 'Mission Control', 34.0, 22.0, 12.0, 'spaceport', { solid: 'box', landmark: true }),
+  T('shuttle', 'Space Shuttle', 37.0, 24.0, 17.0, 'spaceport', { landmark: true }),
+  T('crawler', 'Crawler', 40.0, 35.0, 8.0, 'spaceport', { solid: 'box', landmark: true }),
+  T('rockethall', 'Rocket Hall', 52.0, 42.0, 60.0, 'spaceport', { solid: 'box', landmark: true }),
+
   // Moon base
   T('moonrock', 'Moon Rock', 1.0, 0.9, 0.6, 'moon'),
   T('flag', 'Flag', 1.0, 0.1, 2.2, 'moon', { valueMul: 2 }),
@@ -240,5 +261,6 @@ export const SET_NAMES: Record<GulpSet, string> = {
   farm: 'Farmyard',
   harbor: 'Harbor',
   airport: 'Airport',
+  spaceport: 'Spaceport',
   moon: 'Moon Base',
 };

@@ -100,7 +100,7 @@ const FIXTURES: Record<string, (s: SaveData) => void> = {
     }
     s.mapBest.moon = 0.97;
     s.map100.moon = false;
-    Object.assign(s.mapLevel, { suburb: 26, farm: 27, downtown: 30, harbor: 29, airport: 31, moon: 24 });
+    Object.assign(s.mapLevel, { suburb: 26, farm: 27, downtown: 30, harbor: 29, airport: 31, spaceport: 29, moon: 24 });
     s.selectedMap = 'moon';
     s.recentRoundCash = [2.19e20, 1.98e20, 1.7e20];
     for (const t of OBJECT_TYPES) s.gulpedia[t.id] = 500;

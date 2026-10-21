@@ -203,6 +203,9 @@ function clampToGame(s: SaveData): void {
   if (!QUALITIES.includes(s.settings.quality)) s.settings.quality = 'auto';
   if (!ABILITY_SIDES.includes(s.settings.abilitySide)) s.settings.abilitySide = 'left';
   s.maps.suburb = true;
+  // Every map before an unlocked one is unlocked too: a save from before a map was added in the
+  // middle of MAPS gets the new map once it has passed that point.
+  for (let i = MAPS.length - 2; i >= 0; i--) if (s.maps[MAPS[i + 1].id]) s.maps[MAPS[i].id] = true;
   if (!MAPS.some((m) => m.id === s.selectedMap) || s.maps[s.selectedMap] !== true) s.selectedMap = 'suburb';
 }
 
