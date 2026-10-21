@@ -1,0 +1,153 @@
+{
+ "note": "Phase 3 candidate: CMA-ES search C finalist (re-scored on seeds 3-8) with the Harbor goal at size 24 and the Moon Base goal at size 25. Goals are 0-based (size - 1). Not applied to the game yet.",
+ "commit": "b4230e4+dirty-src",
+ "created": "2026-10-21T10:28:00.467Z",
+ "changed": {
+  "map.farm.goal": {
+   "before": 19,
+   "after": 18,
+   "label": "Happy Farm goal (size, 0-based)"
+  },
+  "map.farm.sizeOffset": {
+   "before": 8,
+   "after": 9,
+   "label": "Happy Farm size offset"
+  },
+  "map.farm.valueMul": {
+   "before": 6,
+   "after": 7.399100556987893,
+   "label": "Happy Farm value multiplier"
+  },
+  "map.downtown.xpMul": {
+   "before": 0.62,
+   "after": 0.6302130455601489,
+   "label": "Downtown XP multiplier"
+  },
+  "map.downtown.valueMul": {
+   "before": 45,
+   "after": 57.519815729662206,
+   "label": "Downtown value multiplier"
+  },
+  "map.harbor.goal": {
+   "before": 24,
+   "after": 23,
+   "label": "Harbor goal (size, 0-based)"
+  },
+  "map.harbor.xpMul": {
+   "before": 0.47,
+   "after": 0.4916255456094583,
+   "label": "Harbor XP multiplier"
+  },
+  "map.harbor.sizeOffset": {
+   "before": 22,
+   "after": 24,
+   "label": "Harbor size offset"
+  },
+  "map.harbor.valueMul": {
+   "before": 236,
+   "after": 193.007810653221,
+   "label": "Harbor value multiplier"
+  },
+  "map.airport.xpMul": {
+   "before": 0.8,
+   "after": 0.9401670381466332,
+   "label": "Airport XP multiplier"
+  },
+  "map.airport.sizeOffset": {
+   "before": 31,
+   "after": 26,
+   "label": "Airport size offset"
+  },
+  "map.airport.valueMul": {
+   "before": 1000,
+   "after": 1146.7397061357328,
+   "label": "Airport value multiplier"
+  },
+  "map.moon.goal": {
+   "before": 25,
+   "after": 24,
+   "label": "Moon Base goal (size, 0-based)"
+  },
+  "map.moon.sizeOffset": {
+   "before": 35,
+   "after": 32,
+   "label": "Moon Base size offset"
+  },
+  "map.moon.valueMul": {
+   "before": 1400,
+   "after": 942.2303502027817,
+   "label": "Moon Base value multiplier"
+  },
+  "upgrades.startSize.growth": {
+   "before": 1.65,
+   "after": 1.4477582690334878,
+   "label": "Starting Size cost growth"
+  },
+  "upgrades.growthScale": {
+   "before": 1,
+   "after": 1.133933615184668,
+   "label": "Capped tracks: cost growth scale (growth = 1 + (g - 1) x k)"
+  },
+  "cashValue.perLevel": {
+   "before": 0.25,
+   "after": 0.31040452430653603,
+   "label": "Cash Value per level"
+  },
+  "golden.chancePerLevel": {
+   "before": 0.01,
+   "after": 0.011543085976059346,
+   "label": "Golden Touch chance per level"
+  },
+  "helpers.cashShare": {
+   "before": 0.6,
+   "after": 0.7954829817291691,
+   "label": "Helper cash share"
+  },
+  "mega.unlockCost": {
+   "before": 3000000,
+   "after": 2968342.158444264,
+   "label": "Mega Mouth unlock cost"
+  },
+  "prestige.coef": {
+   "before": 1.75,
+   "after": 1.9610564032768887,
+   "label": "Dark Matter coefficient"
+  }
+ },
+ "best": {
+  "values": {
+   "map.suburb.goal": 16,
+   "map.suburb.xpMul": 1,
+   "map.farm.goal": 18,
+   "map.farm.xpMul": 0.81,
+   "map.farm.sizeOffset": 9,
+   "map.farm.valueMul": 7.399100556987893,
+   "map.downtown.goal": 25,
+   "map.downtown.xpMul": 0.6302130455601489,
+   "map.downtown.sizeOffset": 16,
+   "map.downtown.valueMul": 57.519815729662206,
+   "map.harbor.goal": 23,
+   "map.harbor.xpMul": 0.4916255456094583,
+   "map.harbor.sizeOffset": 24,
+   "map.harbor.valueMul": 193.007810653221,
+   "map.airport.goal": 27,
+   "map.airport.xpMul": 0.9401670381466332,
+   "map.airport.sizeOffset": 26,
+   "map.airport.valueMul": 1146.7397061357328,
+   "map.moon.goal": 24,
+   "map.moon.xpMul": 0.81,
+   "map.moon.sizeOffset": 32,
+   "map.moon.valueMul": 942.2303502027817,
+   "upgrades.startSize.growth": 1.4477582690334878,
+   "upgrades.growthScale": 1.133933615184668,
+   "cashValue.perLevel": 0.31040452430653603,
+   "golden.chancePerLevel": 0.011543085976059346,
+   "growth.perLevel": 0.1,
+   "helpers.cashShare": 0.7954829817291691,
+   "mega.unlockCost": 2968342.158444264,
+   "prestige.coef": 1.9610564032768887,
+   "prestige.exponent": 0.25,
+   "prestige.bonusPerDm": 0.1
+  }
+ }
+}

@@ -22,3 +22,6 @@ screenshots/*
 .idea/
 films/
 itch/
+
+# Generated balance-tool data (balance/README.md says how to rebuild it)
+balance/data/
