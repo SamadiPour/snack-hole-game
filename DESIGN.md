@@ -167,7 +167,10 @@ Goals, size offsets, XP and value multipliers were tuned with the simulators in 
 (CMA-ES over simulated playthroughs; `balance/tuned/finalist.json`, report in
 `balance/reports/`). Goals sit below each map's XP ceiling: Harbor and Moon Base used to need the
 last props of a full clear, which stalled most players a size short. Moon Base's props are now
-worth a little less in total than Airport's. Every map tracks
+worth a little less in total than Airport's. The Spaceport came later, so the run between the
+first and third Singularity has a new map: its goal sits 1–2 sizes below where the average bot's
+first round ends, and its rounds pay about what Airport rounds do
+(`balance/notes/spaceport.md`). Every map tracks
 its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
 
 ## Singularity (prestige)
@@ -251,31 +254,32 @@ after its last goal.
 | Seeds 1–10, median (range) | `--human` | `--good` |
 |---|---|---|
 | first Singularity | 21:36 (19:34–23:06) | 13:02 (12:49–14:50) |
-| Moon Base (run 4) | 56:07 (55:16–58:44) | 41:28 (41:03–42:31) |
+| Moon Base (run 4) | 57:54 (55:53–59:56) | 42:42 (41:42–43:35) |
 | run 2 rounds to the Harbor goal | 1 (1–1) | 1 (1–1) |
-| seconds per level after the first | 4.65–5.20 | 3.20–3.90 |
-| targets met | 9–10 of 22 | 7–8 of 22 |
+| seconds per level after the first | 4.60–5.05 | 3.25–3.60 |
+| targets met | 8–10 of 22 | 6–8 of 22 |
 
 Rounds to reach each map's goal, seed 1, `--human` (- = not reached that run):
 
-| Run | Suburb | Farm | Downtown | Harbor | Airport | Moon Base | Run length |
-|---|---|---|---|---|---|---|---|
-| 1 | 5 | 3 | 3 | 2 | | | 21:49 (13 rounds) |
-| 2 | 3 | 2 | 2 | 1 | 1 | | 14:18 (9) |
-| 3 | 2 | 1 | 1 | 1 | 1 | | 10:07 (7) |
-| 4 | 2 | 1 | 1 | 1 | 1 | 1 | 19:16 (14) |
-| 5 | 2 | 1 | 1 | 1 | 1 | 1 | 14:11 (11) |
-| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 11:43 (9) |
+| Run | Suburb | Farm | Downtown | Harbor | Airport | Spaceport | Moon Base | Run length |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 5 | 3 | 3 | 2 | | | | 21:49 (13 rounds) |
+| 2 | 3 | 2 | 2 | 1 | 1 | | | 14:18 (9) |
+| 3 | 2 | 1 | 1 | 1 | 1 | 1 | | 10:10 (7) |
+| 4 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 15:51 (12) |
+| 5 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 11:13 (9) |
+| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 10:22 (8) |
 
 Since the retune with the simulators in `balance/` (goals, map offsets and multipliers, prices), no
-goal sits at its map's XP ceiling: goals fall with 7–76% of the map eaten, no run gets stuck, and
-Moon Base comes about twice as fast as before (1h 52m and 59 min). The sim's own targets against
+goal sits at its map's XP ceiling: goals fall with 5–79% of the map eaten, no run gets stuck, and
+Moon Base comes about twice as fast as before (1h 52m and 59 min). The Spaceport (added after the
+retune) moved Moon Base 1–2 minutes later (it was 56:07 and 41:28). The sim's own targets against
 goals falling too fast now miss more: later runs reach each goal in 1 round (target 2–4), run 2
 reaches the Harbor goal in 1 round (target 2–3), the first Singularity comes at 13–23 min (target
-30–60), shop visits buy 8–13 items (target 1–3) and leave the cheapest option at 0.13–0.17 rounds
-of income (target 1–3), and runs grind 3–9 rounds after their last goal. Also missed: radius growth
+30–60), shop visits buy 8–14 items (target 1–3) and leave the cheapest option at 0.13–0.16 rounds
+of income (target 1–3), and runs grind 3–6 rounds after their last goal. Also missed: radius growth
 per round 3.3–3.7x (target 4–10), run 3 reaching the Airport in 63–90% of run 2's time (target
-25–55%) and the skill band (1.0–1.7x, target 1.5–3). The players in `balance/` are slower (their
+25–55%) and the skill band (1.0–2.3x, target 1.5–3). The players in `balance/` are slower (their
 average bot reaches the Moon Base goal in about 1h 20m): playtesting decides which is closer.
 
 ## Architecture
