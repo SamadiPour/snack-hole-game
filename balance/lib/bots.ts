@@ -12,7 +12,7 @@
  * The numbers live in SKILLS so calibration (balance/calibrate.ts) can tune them.
  */
 import { ABILITIES, ABILITY_LEVEL, MAP_CLEARED_FRACTION, SIZE, type AbilityId } from '../../src/config/balance';
-import { magnetRangeFrac } from '../../src/core/economy';
+import { magnetRangeFrac, megaScale } from '../../src/core/economy';
 import { Rng } from '../../src/core/rng';
 import { frontierXpMult, holeSpeed, xpForLevel } from '../../src/core/size';
 import { ALIVE, type WObj, type World } from '../../src/core/world';
@@ -93,7 +93,7 @@ export class Pilot {
   steer(w: World, dt: number): { x: number; z: number } {
     const h = w.main;
     this.think -= dt;
-    const lost = this.target && (this.target.state !== ALIVE || (!this.chasingBig && this.target.f > SIZE.fit * h.r * (this.wantMega ? ABILITY_LEVEL.megaScale : 1)));
+    const lost = this.target && (this.target.state !== ALIVE || (!this.chasingBig && this.target.f > SIZE.fit * h.r * (this.wantMega ? megaScale(w.cfg.abilities.mega.level) : 1)));
     if (this.think <= 0 || lost || (!this.target && this.hasPoint && w.time > this.roamUntil)) {
       this.think = this.p.think * this.rng.range(0.7, 1.3);
       this.decide(w);
@@ -250,7 +250,7 @@ export class Pilot {
     const fit = SIZE.fit * h.r;
     const mega = w.abilities.mega;
     const megaUsable = cfg.abilities.mega.level > 0 && (mega.active > 0.5 || mega.cd <= 0);
-    const megaFit = megaUsable ? SIZE.fit * h.baseR * ABILITY_LEVEL.megaScale : fit;
+    const megaFit = megaUsable ? SIZE.fit * h.baseR * megaScale(cfg.abilities.mega.level) : fit;
     const need = xpForLevel(h.level);
     const refValue = 6 * Math.pow(SIZE.fit * h.baseR, 1.3) * cfg.mapMul;
     const cands = this.cands;

@@ -7,7 +7,7 @@
  * `BASE` is the config as loaded, so the round model and Layer B can convert between baseline
  * units (what Layer A measured) and the tuned ones.
  */
-import { ABILITIES, CASH_VALUE, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, PRESTIGE, SIZE, UPGRADES, VALUE, type MapId, type UpgradeId } from '../../src/config/balance';
+import { ABILITIES, ABILITY_LEVEL, CASH_VALUE, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, PRESTIGE, SIZE, UPGRADES, VALUE, type MapId, type UpgradeId } from '../../src/config/balance';
 import type { RoundConfig } from '../../src/core/economy';
 import type { SaveData } from '../../src/core/save';
 
@@ -24,6 +24,8 @@ export interface Param {
   set(v: number): void;
   /** Changes what happens inside a round in a way the fitted model cannot see (Layer A only). */
   dynamic?: boolean;
+  /** Set by hand for experiments; the search leaves it alone. */
+  manual?: boolean;
 }
 
 const map = (id: MapId) => MAPS.find((m) => m.id === id)!;
@@ -36,6 +38,9 @@ export const BASE = {
   xpMul: Object.fromEntries(MAPS.map((m) => [m.id, m.xpMul])) as Record<MapId, number>,
   valueMul: Object.fromEntries(MAPS.map((m) => [m.id, m.valueMul])) as Record<MapId, number>,
   upgradeGrowth: Object.fromEntries(UPGRADES.map((u) => [u.id, u.growth])) as Record<UpgradeId, number>,
+  upgradeBase: Object.fromEntries(UPGRADES.map((u) => [u.id, u.base])) as Record<UpgradeId, number>,
+  unlockCost: ABILITIES.map((a) => a.unlockCost),
+  helperCounts: [...HELPERS.countCosts],
   helperShare: HELPERS.roundCashShare,
   growthPerLevel: GROWTH_PER_LEVEL,
 };
@@ -53,13 +58,47 @@ for (const m of MAPS) {
   if (m.id !== 'suburb')
     P.push({ id: `map.${m.id}.valueMul`, group: 'maps', label: `${m.name} value multiplier`, lo: BASE.valueMul[m.id] * 0.5, hi: BASE.valueMul[m.id] * 2, log: true, get: () => map(m.id).valueMul, set: (v) => (map(m.id).valueMul = v) });
 }
-P.push({ id: 'upgrades.startSize.growth', group: 'upgrades', label: 'Starting Size cost growth', lo: 1.4, hi: 1.8, get: () => upg('startSize').growth, set: (v) => (upg('startSize').growth = v) });
+P.push({ id: 'upgrades.startSize.growth', group: 'upgrades', label: 'Starting Size cost growth', lo: 1.1, hi: 1.5, get: () => upg('startSize').growth, set: (v) => (upg('startSize').growth = v) });
+P.push({
+  id: 'upgrades.baseScale',
+  group: 'prices',
+  label: 'Upgrades: every base price x k',
+  lo: 0.3,
+  hi: 3,
+  log: true,
+  get: () => upg('speed').base / BASE.upgradeBase.speed,
+  set: (k) => {
+    for (const u of UPGRADES) u.base = BASE.upgradeBase[u.id] * k;
+  },
+});
+P.push({
+  id: 'abilities.unlockScale',
+  group: 'prices',
+  label: 'Abilities: every unlock price x k',
+  lo: 0.25,
+  hi: 4,
+  log: true,
+  get: () => ABILITIES[0].unlockCost / BASE.unlockCost[0],
+  set: (k) => ABILITIES.forEach((a, i) => (a.unlockCost = BASE.unlockCost[i] * k)),
+});
+P.push({ id: 'abilities.levelGrowth', group: 'prices', label: 'Abilities: price growth per level', lo: 1.3, hi: 3.5, get: () => ABILITY_LEVEL.costGrowth, set: (v) => (ABILITY_LEVEL.costGrowth = v) });
+P.push({
+  id: 'helpers.countScale',
+  group: 'prices',
+  label: 'Helpers: every hole price x k',
+  lo: 0.25,
+  hi: 4,
+  log: true,
+  get: () => HELPERS.countCosts[0] / BASE.helperCounts[0],
+  set: (k) => BASE.helperCounts.forEach((c, i) => (HELPERS.countCosts[i] = c * k)),
+});
+P.push({ id: 'helpers.levelGrowth', group: 'prices', label: 'Helper training: price growth per level', lo: 1.2, hi: 2.5, get: () => HELPERS.levelGrowth, set: (v) => (HELPERS.levelGrowth = v) });
 P.push({
   id: 'upgrades.growthScale',
   group: 'upgrades',
   label: 'Capped tracks: cost growth scale (growth = 1 + (g - 1) x k)',
-  lo: 0.6,
-  hi: 1.2,
+  lo: 0.5,
+  hi: 1.5,
   get: () => (upg('speed').growth - 1) / (BASE.upgradeGrowth.speed - 1),
   set: (k) => {
     for (const id of CAPPED) upg(id).growth = 1 + (BASE.upgradeGrowth[id] - 1) * k;
@@ -69,16 +108,17 @@ P.push({ id: 'cashValue.perLevel', group: 'upgrades', label: 'Cash Value per lev
 P.push({ id: 'golden.chancePerLevel', group: 'upgrades', label: 'Golden Touch chance per level', lo: 0.01, hi: 0.025, get: () => GOLDEN.chancePerLevel, set: (v) => (GOLDEN.chancePerLevel = v) });
 P.push({ id: 'growth.perLevel', group: 'upgrades', label: 'Growth Rate XP per level', lo: 0.1, hi: 0.2, get: () => over.growthPerLevel, set: (v) => (over.growthPerLevel = v) });
 P.push({ id: 'helpers.cashShare', group: 'helpers', label: 'Helper cash share', lo: 0.6, hi: 1.2, get: () => HELPERS.roundCashShare, set: (v) => (HELPERS.roundCashShare = v) });
-P.push({ id: 'mega.unlockCost', group: 'abilities', label: 'Mega Mouth unlock cost', lo: 5e5, hi: 3e6, log: true, get: () => ABILITIES[2].unlockCost, set: (v) => (ABILITIES[2].unlockCost = Math.round(v / 1e4) * 1e4) });
+P.push({ id: 'mega.unlockCost', group: 'abilities', label: 'Mega Mouth unlock cost', lo: 1e4, hi: 3e6, log: true, manual: true, get: () => ABILITIES[2].unlockCost, set: (v) => (ABILITIES[2].unlockCost = Math.round(v / 1e3) * 1e3) });
 P.push({ id: 'prestige.coef', group: 'prestige', label: 'Dark Matter coefficient', lo: 1.75, hi: 3.5, get: () => PRESTIGE.coef, set: (v) => (PRESTIGE.coef = v) });
 P.push({ id: 'prestige.exponent', group: 'prestige', label: 'Dark Matter exponent', lo: 0.25, hi: 0.4, get: () => PRESTIGE.exponent, set: (v) => (PRESTIGE.exponent = v) });
 P.push({ id: 'prestige.bonusPerDm', group: 'prestige', label: 'Cash bonus per Dark Matter', lo: 0.1, hi: 0.25, get: () => PRESTIGE.bonusPerDm, set: (v) => (PRESTIGE.bonusPerDm = v) });
+P.push({ id: 'map.moon.needsSingularities', group: 'maps', label: 'Moon Base: Singularities needed', lo: 1, hi: 4, int: true, manual: true, get: () => map('moon').needsSingularities, set: (v) => (map('moon').needsSingularities = Math.round(v)) });
 // Layer A only: they change what happens in a round.
 P.push({ id: 'SIZE.frontierBonus', group: 'growth', label: 'Frontier XP bonus', lo: 1, hi: 4, dynamic: true, get: () => SIZE.frontierBonus, set: (v) => (SIZE.frontierBonus = v) });
 P.push({ id: 'VALUE.exp', group: 'value', label: 'Value exponent', lo: 1.1, hi: 1.6, dynamic: true, get: () => VALUE.exp, set: (v) => (VALUE.exp = v) });
 
 export const PARAMS = P;
-export const SEARCH = P.filter((p) => !p.dynamic);
+export const SEARCH = P.filter((p) => !p.dynamic && !p.manual);
 const baseline = Object.fromEntries(P.map((p) => [p.id, p.get()]));
 export const baselineValues = (): Record<string, number> => ({ ...baseline });
 

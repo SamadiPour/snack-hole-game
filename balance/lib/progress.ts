@@ -137,22 +137,22 @@ function options(s: SaveData, withOffline: boolean): Option[] {
     out.push({
       key: `u-${u.id}`,
       name: u.name,
-      cost: eco.upgradeCost(u.id, s.upgrades[u.id], s.tier),
+      cost: eco.upgradeCost(u.id, s.upgrades[u.id], eco.priceScale(s)),
       fill: s.upgrades[u.id] / u.max,
       apply: (t) => (t.upgrades[u.id] += 1),
       buy: (t) => eco.buyUpgrade(t, u.id, 1) > 0,
     });
   }
   if (s.runCash >= HELPERS.unlockAt && s.helpers < HELPERS.countCosts.length)
-    out.push({ key: 'h-count', name: `Helper #${s.helpers + 1}`, cost: eco.helperCountCost(s.helpers, s.tier), fill: s.helpers / 4, apply: (t) => (t.helpers += 1), buy: (t) => eco.buyHelper(t) });
+    out.push({ key: 'h-count', name: `Helper #${s.helpers + 1}`, cost: eco.helperCountCost(s.helpers, eco.priceScale(s)), fill: s.helpers / 4, apply: (t) => (t.helpers += 1), buy: (t) => eco.buyHelper(t) });
   if (s.helpers > 0 && s.helperLevel < HELPERS.levelMax)
-    out.push({ key: 'h-level', name: 'Helper training', cost: eco.helperLevelCost(s.helperLevel, s.tier), fill: s.helperLevel / HELPERS.levelMax, apply: (t) => (t.helperLevel += 1), buy: (t) => eco.buyHelperLevel(t) });
+    out.push({ key: 'h-level', name: 'Helper training', cost: eco.helperLevelCost(s.helperLevel, eco.priceScale(s)), fill: s.helperLevel / HELPERS.levelMax, apply: (t) => (t.helperLevel += 1), buy: (t) => eco.buyHelperLevel(t) });
   for (const a of ABILITIES) {
     if (!eco.isAbilityVisible(s, a) || s.abilities[a.id] >= a.maxLevel) continue;
     out.push({
       key: `a-${a.id}`,
       name: `${a.name} ${s.abilities[a.id] === 0 ? 'unlock' : `L${s.abilities[a.id] + 1}`}`,
-      cost: eco.abilityCost(a.id, s.abilities[a.id], s.tier),
+      cost: eco.abilityCost(a.id, s.abilities[a.id], eco.priceScale(s)),
       fill: s.abilities[a.id] / a.maxLevel,
       apply: (t) => (t.abilities[a.id] += 1),
       buy: (t) => eco.buyAbility(t, a.id),

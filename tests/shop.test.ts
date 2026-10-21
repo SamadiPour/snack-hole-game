@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ABILITIES, HELPERS, OFFLINE, SKINS } from '../src/config/balance';
+import { ABILITIES, HELPERS, MAPS, OFFLINE, SKINS } from '../src/config/balance';
 import { ACHIEVEMENTS, checkAchievements } from '../src/core/achievements';
-import { abilityCost, buyAbility, buyHelper, buyHelperLevel, cashBreakdown, computeOffline, helperCountCost, helperLevelCost } from '../src/core/economy';
+import { abilityCost, buyAbility, buyHelper, buyHelperLevel, cashBreakdown, computeOffline, helperCountCost, helperLevelCost, priceScale } from '../src/core/economy';
 import { defaultSave } from '../src/core/save';
 
 describe('helper holes', () => {
@@ -43,12 +43,12 @@ describe('helper holes', () => {
 describe('abilities', () => {
   it('unlocks, levels up to the max and charges the listed price', () => {
     const s = defaultSave(0);
-    s.cash = 1e15;
+    s.cash = 1e9;
     for (const a of ABILITIES) {
       for (let lvl = 0; lvl < a.maxLevel; lvl++) {
         const before = s.cash;
         expect(buyAbility(s, a.id)).toBe(true);
-        expect(before - s.cash).toBe(abilityCost(a.id, lvl));
+        expect(before - s.cash).toBeCloseTo(abilityCost(a.id, lvl), 2);
       }
       expect(buyAbility(s, a.id)).toBe(false);
       expect(s.abilities[a.id]).toBe(a.maxLevel);
@@ -56,7 +56,21 @@ describe('abilities', () => {
   });
 
   it('prices scale with the Singularity tier', () => {
-    expect(abilityCost('dash', 0, 2)).toBeCloseTo(abilityCost('dash', 0) * 16);
+    const s = defaultSave(0);
+    s.tier = 2;
+    expect(abilityCost('dash', 0, priceScale(s))).toBeCloseTo(abilityCost('dash', 0) * 16);
+  });
+
+  it('prices are in the money of the newest unlocked map', () => {
+    const s = defaultSave(0);
+    expect(priceScale(s)).toBe(1);
+    s.maps.farm = true;
+    expect(priceScale(s)).toBe(MAPS[1].valueMul);
+    s.cash = helperCountCost(0) * MAPS[1].valueMul - 1;
+    expect(buyHelper(s)).toBe(false);
+    s.cash += 1;
+    expect(buyHelper(s)).toBe(true);
+    expect(s.cash).toBeCloseTo(0);
   });
 });
 

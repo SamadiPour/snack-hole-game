@@ -181,15 +181,15 @@ function options(s: SaveData): Option[] {
   const out: Option[] = [];
   for (const u of UPGRADES) {
     if (!eco.isUpgradeVisible(s, u) || s.upgrades[u.id] >= u.max || u.id === 'offline') continue;
-    out.push({ name: u.name, key: `u-${u.id}`, cost: eco.upgradeCost(u.id, s.upgrades[u.id], s.tier), buy: () => eco.buyUpgrade(s, u.id, 1) > 0 });
+    out.push({ name: u.name, key: `u-${u.id}`, cost: eco.upgradeCost(u.id, s.upgrades[u.id], eco.priceScale(s)), buy: () => eco.buyUpgrade(s, u.id, 1) > 0 });
   }
   if (s.runCash >= HELPERS.unlockAt && s.helpers < HELPERS.countCosts.length)
-    out.push({ name: `Helper #${s.helpers + 1}`, key: `h-${s.helpers + 1}`, cost: eco.helperCountCost(s.helpers, s.tier), buy: () => eco.buyHelper(s) });
+    out.push({ name: `Helper #${s.helpers + 1}`, key: `h-${s.helpers + 1}`, cost: eco.helperCountCost(s.helpers, eco.priceScale(s)), buy: () => eco.buyHelper(s) });
   if (s.helpers > 0 && s.helperLevel < HELPERS.levelMax)
-    out.push({ name: 'Helper level', key: 'hl', cost: eco.helperLevelCost(s.helperLevel, s.tier), buy: () => eco.buyHelperLevel(s) });
+    out.push({ name: 'Helper level', key: 'hl', cost: eco.helperLevelCost(s.helperLevel, eco.priceScale(s)), buy: () => eco.buyHelperLevel(s) });
   for (const a of ABILITIES) {
     if (!eco.isAbilityVisible(s, a) || s.abilities[a.id] >= a.maxLevel) continue;
-    out.push({ name: `${a.name} ${s.abilities[a.id] === 0 ? 'unlock' : 'level'}`, key: `a-${a.id}-${s.abilities[a.id] === 0 ? 0 : 1}`, cost: eco.abilityCost(a.id, s.abilities[a.id], s.tier), buy: () => eco.buyAbility(s, a.id) });
+    out.push({ name: `${a.name} ${s.abilities[a.id] === 0 ? 'unlock' : 'level'}`, key: `a-${a.id}-${s.abilities[a.id] === 0 ? 0 : 1}`, cost: eco.abilityCost(a.id, s.abilities[a.id], eco.priceScale(s)), buy: () => eco.buyAbility(s, a.id) });
   }
   return out;
 }
@@ -229,7 +229,7 @@ function shop(s: SaveData, lastRoundCash: number): ShopStats {
     purchases,
     cheapestRounds: cheapest / inc,
     waitRounds: (cheapest - s.cash) / inc,
-    sizeRounds: eco.upgradeCost('startSize', s.upgrades.startSize, s.tier) / inc,
+    sizeRounds: eco.upgradeCost('startSize', s.upgrades.startSize, eco.priceScale(s)) / inc,
   };
 }
 

@@ -18,6 +18,8 @@ import {
   abilityCooldown,
   abilityCost,
   abilityDuration,
+  megaScale,
+  priceScale,
   cashBreakdown,
   completedSets,
   dmForLifetime,
@@ -110,8 +112,8 @@ function upgradesTab(api: HubApi, cards: Card[]): HTMLElement {
       },
       button: {
         label: () => '+1',
-        cost: () => cost(upgradeCost(d.id, s.upgrades[d.id], s.tier)),
-        can: () => s.upgrades[d.id] < d.max && s.cash >= upgradeCost(d.id, s.upgrades[d.id], s.tier),
+        cost: () => cost(upgradeCost(d.id, s.upgrades[d.id], priceScale(s))),
+        can: () => s.upgrades[d.id] < d.max && s.cash >= upgradeCost(d.id, s.upgrades[d.id], priceScale(s)),
         onClick: () => api.buyUpgrade(d.id),
         doneText: () => (s.upgrades[d.id] >= d.max ? 'MAXED' : null),
       },
@@ -138,8 +140,8 @@ function helpersTab(api: HubApi, cards: Card[]): HTMLElement {
     effect: () => `${s.helpers} → ${Math.min(HELPERS.countCosts.length, s.helpers + 1)} helpers`,
     button: {
       label: () => '+1',
-      cost: () => cost(helperCountCost(s.helpers, s.tier)),
-      can: () => s.cash >= helperCountCost(s.helpers, s.tier),
+      cost: () => cost(helperCountCost(s.helpers, priceScale(s))),
+      can: () => s.cash >= helperCountCost(s.helpers, priceScale(s)),
       onClick: () => api.buyHelper(),
       doneText: () => (s.helpers >= HELPERS.countCosts.length ? 'MAXED' : null),
     },
@@ -158,8 +160,8 @@ function helpersTab(api: HubApi, cards: Card[]): HTMLElement {
       },
       button: {
         label: () => '+1',
-        cost: () => cost(helperLevelCost(s.helperLevel, s.tier)),
-        can: () => s.cash >= helperLevelCost(s.helperLevel, s.tier),
+        cost: () => cost(helperLevelCost(s.helperLevel, priceScale(s))),
+        can: () => s.cash >= helperLevelCost(s.helperLevel, priceScale(s)),
         onClick: () => api.buyHelperLevel(),
         doneText: () => (s.helperLevel >= HELPERS.levelMax ? 'MAXED' : null),
       },
@@ -190,15 +192,16 @@ function abilitiesTab(api: HubApi, cards: Card[]): HTMLElement {
       level: () => (s.abilities[a.id] > 0 ? `Lv ${s.abilities[a.id]}/${a.maxLevel}` : 'Locked'),
       effect: () => {
         const l = s.abilities[a.id];
-        if (l === 0) return `${abilityDuration(a.id, 1).toFixed(1)}s, every ${abilityCooldown(a.id, 1).toFixed(0)}s`;
-        const now = `${abilityDuration(a.id, l).toFixed(1)}s / ${abilityCooldown(a.id, l).toFixed(1)}s cd`;
+        const size = (lv: number) => (a.id === 'mega' ? `+${Math.round((megaScale(lv) - 1) * 100)}%, ` : '');
+        if (l === 0) return `${size(1)}${abilityDuration(a.id, 1).toFixed(1)}s, every ${abilityCooldown(a.id, 1).toFixed(0)}s`;
+        const now = `${size(l)}${abilityDuration(a.id, l).toFixed(1)}s / ${abilityCooldown(a.id, l).toFixed(1)}s cd`;
         if (l >= a.maxLevel) return now;
-        return `${now} → ${abilityDuration(a.id, l + 1).toFixed(1)}s / ${abilityCooldown(a.id, l + 1).toFixed(1)}s`;
+        return `${now} → ${size(l + 1)}${abilityDuration(a.id, l + 1).toFixed(1)}s / ${abilityCooldown(a.id, l + 1).toFixed(1)}s`;
       },
       button: {
         label: () => (s.abilities[a.id] === 0 ? 'Unlock' : '+1'),
-        cost: () => cost(abilityCost(a.id, s.abilities[a.id], s.tier)),
-        can: () => s.cash >= abilityCost(a.id, s.abilities[a.id], s.tier),
+        cost: () => cost(abilityCost(a.id, s.abilities[a.id], priceScale(s))),
+        can: () => s.cash >= abilityCost(a.id, s.abilities[a.id], priceScale(s)),
         onClick: () => api.buyAbility(a.id),
         doneText: () => (s.abilities[a.id] >= a.maxLevel ? 'MAXED' : null),
       },

@@ -3,9 +3,10 @@
  * each parameter moved from the current design. Each check yields a miss >= 0 per skill (0 inside
  * the target, else the relative distance past it, capped at 5); average and weak count 1.5x.
  */
+import { MAPS } from '../../src/config/balance';
 import type { Skill } from './bots';
 import * as M from './metrics';
-import { SEARCH } from './params';
+import { SEARCH, applyParams, resetParams } from './params';
 import type { PlayResult } from './progress';
 
 export const SKILL_WEIGHT: Record<Skill, number> = { strong: 1, average: 1.5, weak: 1.5 };
@@ -92,6 +93,20 @@ export const CHECKS: CheckDef[] = [
         return { value: short, miss: short / 2 };
       }, ['average', 'weak']),
   },
+  {
+    // The shop never runs dry before the finish: something left to buy, not trivially cheap.
+    id: 'shop',
+    weight: 3,
+    label: 'shop before the finish: cheapest option left (rounds of income), sold-out visits, buys per visit',
+    eval: (by) =>
+      perSkill((s) => {
+        const rs = by(s).flatMap((r) => M.preFinish(r).filter((x) => x.clock > 600));
+        const ratio = M.median(rs.map((x) => (Number.isFinite(x.cheapest) ? x.cheapest / Math.max(1, x.cash) : 10)));
+        const soldOut = rs.length ? rs.filter((x) => !Number.isFinite(x.cheapest)).length / rs.length : 0;
+        const buys = M.median(rs.map((x) => x.purchases.length));
+        return { value: ratio, miss: miss(ratio, { lo: 0.25 }) + miss(1 - soldOut, { lo: 0.98 }) * 5 + miss(buys, { hi: 4 }) };
+      }),
+  },
   { id: 'stall', weight: 4, label: 'playthroughs hitting the 150-round cap', eval: (by) => perSkill((s) => { const v = by(s).filter((r) => r.stalled?.includes('150 rounds')).length / Math.max(1, by(s).length); return { value: v, miss: v }; }) },
   {
     id: 'perceptible',
@@ -108,6 +123,19 @@ export const CHECKS: CheckDef[] = [
 
 /** Single-stat (Starting Size) and returner checks, from their own playthroughs. */
 export const EXTRA: CheckDef[] = [
+  {
+    // Prices follow the newest map's value multiplier, so a map worth less than the one before
+    // would make the shop cheaper on unlocking it.
+    id: 'mapValues',
+    weight: 3,
+    label: 'map value multipliers rise map by map (relative drops, summed)',
+    eval: () =>
+      perSkill(() => {
+        let drop = 0;
+        for (let i = 1; i < MAPS.length; i++) drop += Math.max(0, MAPS[i - 1].valueMul / MAPS[i].valueMul - 1);
+        return { value: drop, miss: Math.min(5, drop * 2) };
+      }, ['average']),
+  },
   { id: 'singleStat', weight: 2, label: 'single-stat Starting Size stalls', eval: (_, all) => perSkill(() => { const rs = all.filter((r) => r.spec.policy === 'single'); const v = rs.filter((r) => r.stalled).length / Math.max(1, rs.length); return { value: v, miss: v }; }, ['average']) },
   {
     id: 'offline',
@@ -142,6 +170,16 @@ export function changeOf(values: Record<string, number>, baseline: Record<string
 }
 
 export function loss(results: PlayResult[], values: Record<string, number>, baseline: Record<string, number>, lambda = 2): LossResult {
+  // Checks that read the config (mapValues) see the candidate's values; restored below.
+  applyParams(values);
+  try {
+    return lossOf(results, values, baseline, lambda);
+  } finally {
+    resetParams();
+  }
+}
+
+function lossOf(results: PlayResult[], values: Record<string, number>, baseline: Record<string, number>, lambda: number): LossResult {
   const core = results.filter((r) => r.spec.pattern === 'binge' && r.spec.policy !== 'single');
   const by = (s: Skill) => core.filter((r) => r.spec.skill === s);
   const parts = [...CHECKS, ...EXTRA].map((c) => {

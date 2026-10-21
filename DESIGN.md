@@ -82,7 +82,7 @@ from that round. Ending it from the pause menu does count.
 
 ## Golden props, events and landmarks
 
-- **Golden props**: every prop rolls `1% + 1.15% * GoldenTouchLvl` (10.2% at the max level 8) to spawn golden each
+- **Golden props**: every prop rolls `1% + 1% * GoldenTouchLvl` (9% at the max level 8) to spawn golden each
   round: worth x10, drawn in gold with a moving glint and sparkles, coin ding + gold floater on
   swallow. Results show how many you ate (✨).
 - **Random events** (rounds only, not the hub demo): at round start each event rolls its chance
@@ -107,7 +107,11 @@ from that round. Ending it from the pause menu does count.
 Swallows within the window (`1.2 s + 0.15 s * comboLvl`) of the previous one stack.
 `comboMult = min(1 + 0.02 * (stack - 1), 2 + 0.15 * comboLvl)`.
 
-## Cash upgrades (`cost = base * growth^level * 4^tier`)
+## Cash upgrades (`cost = base * growth^level * map * 4^tier`)
+
+Every cash price (upgrades, helpers, abilities) is in the newest unlocked map's money: `map` is
+that map's value multiplier (`priceScale`). Unlocking a map raises prices along with income, so
+the shop keeps something worth buying on every map; the bases below are Suburb prices.
 
 Capped tracks with few, chunky levels and no milestone multipliers. One level is bought at a
 time (no bulk buy). Growth-type upgrades (Speed, Growth Rate, Magnet, Round Time) raise how many
@@ -115,33 +119,35 @@ levels a round gains, so they are priced like size upgrades.
 
 | Upgrade | Effect per level | Base | Growth | Max | Visible at (run $) |
 |---|---|---|---|---|---|
-| Starting Size | +1 start level | 45 | 1.45 | 45 | 0 |
-| Speed | +8% speed | 60 | 5 | 8 | 0 |
-| Cash Value | +31% cash (linear) | 100 | 3.8 | 10 | 0 |
-| Round Time | +10 s (base 60 s, max 100 s) | 400 | 9 | 4 | 0 |
-| Growth Rate | +10% XP | 150 | 5.5 | 6 | 100 |
-| Magnet | pull range `R * (0.15 + 0.12 lvl)` | 200 | 5 | 8 | 300 |
-| Combo Window | +0.15 s window, +0.15 cap | 500 | 4.4 | 8 | 1,500 |
-| Golden Touch | +1.15% golden chance (base 1%) | 5,000 | 4.4 | 8 | 15,000 |
-| Offline Vault | +1 h offline cap (base 8 h) | 3,000 | 10 | 4 | 5,000 |
+| Starting Size | +1 start level | 55 | 1.25 | 45 | 0 |
+| Speed | +8% speed | 75 | 3.25 | 8 | 0 |
+| Cash Value | +26% cash (linear) | 125 | 2.8 | 10 | 0 |
+| Round Time | +10 s (base 60 s, max 100 s) | 500 | 2.8 | 4 | 0 |
+| Growth Rate | +10% XP | 185 | 2.8 | 6 | 100 |
+| Magnet | pull range `R * (0.15 + 0.12 lvl)` | 250 | 2.95 | 8 | 300 |
+| Combo Window | +0.15 s window, +0.15 cap | 620 | 2.5 | 8 | 1,500 |
+| Golden Touch | +1% golden chance (base 1%) | 6,200 | 2.35 | 8 | 15,000 |
+| Offline Vault | +1 h offline cap (base 8 h) | 3,700 | 3 | 4 | 5,000 |
 
 ## Helper holes
 
-- Count 1–4, one-off costs `2K, 50K, 1M, 25M` (visible after $800).
-- Training level: `5,000 * 3.5^lvl` (max 10). Radius `0.7 * 1.13^lvl` (cap 2.4 m), +10% radius
+- Count 1–4, one-off costs `4.4K, 15K, 37K, 285K` (visible after $800).
+- Training level: `5,000 * 1.71^lvl` (max 10). Radius `0.7 * 1.13^lvl` (cap 2.4 m), +10% radius
   and speed per Quantum Helpers level.
-- Helpers only work during rounds: they chase the nearest edible prop and earn 80% of its value.
+- Helpers only work during rounds: they chase the nearest edible prop and earn 84% of its value.
   They earn nothing between rounds or offline.
 
 ## Abilities (unlock once, then level up to 5)
 
 | Ability | Key | Effect | Cooldown | Unlock cost |
 |---|---|---|---|---|
-| Dash | Space / 1 | x2.8 speed for 0.6 s | 7 s | $5K |
-| Vortex | 2 | magnet +300% range, x3 pull, 4 s | 22 s | $100K |
-| Mega Mouth | 3 | radius x1.45, 5 s | 30 s | $2.97M |
+| Dash | Space / 1 | x2.8 speed for 0.6 s | 7 s | $20K |
+| Vortex | 2 | magnet +300% range, x3 pull, 4 s | 22 s | $54K |
+| Mega Mouth | 3 | radius x1.35 (+0.1 per level), 5 s | 30 s | $208K |
 
-Level cost `unlock * 4^lvl`; each level −12% cooldown, +20% duration.
+Level cost `unlock * 1.65^lvl`; each level −12% cooldown, +20% duration (Mega Mouth also +10% radius).
+The magnet's range and pull follow the hole's own radius, so Mega Mouth widens the mouth but
+not the magnet's reach past the rim.
 Rounds start with Dash ready and Vortex / Mega Mouth half charged (`startCharge`), so the big
 ones land mid-round instead of being spent at second 0 on a tiny hole.
 
@@ -156,23 +162,23 @@ is selected). Later maps also need Singularities.
 | Map | Unlock | Goal (size) | Max size | Value x | Size offset | XP x |
 |---|---|---|---|---|---|---|
 | Sunny Suburb | free | 17 | 27 | 1 | 0 | 1 |
-| Happy Farm | Suburb goal | 19 | 29 | 7.4 | 9 | 0.81 |
-| Downtown | Farm goal | 26 | 31 | 57.5 | 16 | 0.63 |
-| Harbor | Downtown goal | 24 | 30 | 193 | 24 | 0.49 |
-| Airport | Harbor goal + 1 Singularity | 28 | 35 | 1,150 | 26 | 0.94 |
-| Moon Base | Airport goal + 3 Singularities | 25 | 30 | 940 | 32 | 0.81 |
+| Happy Farm | Suburb goal | 19 | 29 | 9.7 | 9 | 0.81 |
+| Downtown | Farm goal | 26 | 31 | 50 | 16 | 0.63 |
+| Harbor | Downtown goal | 24 | 30 | 233 | 24 | 0.49 |
+| Airport | Harbor goal + 1 Singularity | 28 | 35 | 870 | 26 | 0.94 |
+| Moon Base | Airport goal + 3 Singularities | 25 | 30 | 1,080 | 32 | 0.81 |
 
 Goals, size offsets, XP and value multipliers were tuned with the simulators in `balance/`
 (CMA-ES over simulated playthroughs; `balance/tuned/finalist.json`, report in
 `balance/reports/`). Goals sit below each map's XP ceiling: Harbor and Moon Base used to need the
-last props of a full clear, which stalled most players a size short. Moon Base's props are now
-worth a little less in total than Airport's. Every map tracks
+last props of a full clear, which stalled most players a size short. Value multipliers rise map
+by map, since prices follow them. Every map tracks
 its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
 
 ## Singularity (prestige)
 
 - Available once Downtown is unlocked in the run.
-- Dark Matter comes from lifetime cash: `DM total = floor(1.96 * (lifetimeCash / 1e6)^0.25)`, and a
+- Dark Matter comes from lifetime cash: `DM total = floor(1.75 * (lifetimeCash / 1e6)^0.25)`, and a
   Singularity pays what has not been claimed yet. Doubling DM needs ~16x the cash, and collapsing
   again at the same point pays nothing, so runs must push further. The panel shows the gain, its
   % of all DM earned so far, a "Resets this run" / "You keep" list with the run's numbers, the
@@ -249,33 +255,31 @@ after its last goal.
 
 | Seeds 1–10, median (range) | `--human` | `--good` |
 |---|---|---|
-| first Singularity | 21:36 (19:34–23:06) | 13:02 (12:49–14:50) |
-| Moon Base (run 4) | 56:07 (55:16–58:44) | 41:28 (41:03–42:31) |
-| run 2 rounds to the Harbor goal | 1 (1–1) | 1 (1–1) |
-| seconds per level after the first | 4.65–5.20 | 3.20–3.90 |
-| targets met | 9–10 of 22 | 7–8 of 22 |
+| first Singularity | 58:02 (51:37–1h 16m) | 41:58 (31:59–53:15) |
+| Moon Base (run 4) | 2h 44m (2h 29m–2h 55m) | 2h 00m (1h 53m–2h 10m) |
+| run 2 rounds to the Harbor goal | 5.5 (2–16) | 3.5 (2–7) |
+| seconds per level after the first | 4.70–5.85 | 3.83–4.65 |
+| targets met | 9–13 of 22 | 10–12 of 22 |
 
 Rounds to reach each map's goal, seed 1, `--human` (- = not reached that run):
 
 | Run | Suburb | Farm | Downtown | Harbor | Airport | Moon Base | Run length |
 |---|---|---|---|---|---|---|---|
-| 1 | 5 | 3 | 3 | 2 | | | 21:49 (13 rounds) |
-| 2 | 3 | 2 | 2 | 1 | 1 | | 14:18 (9) |
-| 3 | 2 | 1 | 1 | 1 | 1 | | 10:07 (7) |
-| 4 | 2 | 1 | 1 | 1 | 1 | 1 | 19:16 (14) |
-| 5 | 2 | 1 | 1 | 1 | 1 | 1 | 14:11 (11) |
-| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 11:43 (9) |
+| 1 | 4 | 8 | 15 | - | | | 55:22 (32 rounds) |
+| 2 | 3 | 4 | 6 | 6 | - | | 56:56 (30) |
+| 3 | 2 | 3 | 4 | 2 | 8 | | 39:26 (22) |
+| 4 | 2 | 1 | 3 | 2 | 2 | 2 | 37:05 (24) |
+| 5 | 2 | 1 | 2 | 2 | 1 | 1 | 24:48 (16) |
+| 6 | 2 | 1 | 1 | 1 | 2 | 1 | 17:42 (12) |
 
-Since the retune with the simulators in `balance/` (goals, map offsets and multipliers, prices), no
-goal sits at its map's XP ceiling: goals fall with 7–76% of the map eaten, no run gets stuck, and
-Moon Base comes about twice as fast as before (1h 52m and 59 min). The sim's own targets against
-goals falling too fast now miss more: later runs reach each goal in 1 round (target 2–4), run 2
-reaches the Harbor goal in 1 round (target 2–3), the first Singularity comes at 13–23 min (target
-30–60), shop visits buy 8–13 items (target 1–3) and leave the cheapest option at 0.13–0.17 rounds
-of income (target 1–3), and runs grind 3–9 rounds after their last goal. Also missed: radius growth
-per round 3.3–3.7x (target 4–10), run 3 reaching the Airport in 63–90% of run 2's time (target
-25–55%) and the skill band (1.0–1.7x, target 1.5–3). The players in `balance/` are slower (their
-average bot reaches the Moon Base goal in about 1h 20m): playtesting decides which is closer.
+Prices follow the newest map's value multiplier, so the shop never runs dry: shop visits buy 2–4
+items (target 1–3 for `--human`) and nothing is ever sold out. Goals sit below each map's XP
+ceiling. Misses: the cheapest option left costs 0.22–0.36 rounds of income (target 1–3), first
+visits take up to 17 rounds on Downtown and Harbor (target 2–8; prices jump with each new map
+before Starting Size catches up), later runs still reach most goals in 1–2 rounds (target 2–4),
+runs grind 6–27 rounds after their last goal while the DM gain climbs to the +50% hint, and the
+skill band. The players in `balance/` are slower (their average bot reaches the Moon Base goal in
+about 3h 15m): playtesting decides which is closer.
 
 ## Architecture
 

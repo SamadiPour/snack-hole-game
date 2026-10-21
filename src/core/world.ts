@@ -6,6 +6,7 @@ import {
   holeSpeed,
   magnetPull,
   magnetRangeFrac,
+  megaScale,
   radiusForLevel,
   timeBonusFrac,
   xpForLevel,
@@ -422,7 +423,7 @@ export class World {
     if (this.bySize.length !== this.objects.length) this.bySize = [...this.objects].sort((a, b) => a.f - b.f);
     const mega = this.abilities.mega;
     const megaUsable = this.cfg.abilities.mega.level > 0 && (mega.active > 0 || mega.cd <= this.timeLeft);
-    const mouth = SIZE.fit * (megaUsable ? ABILITY_LEVEL.megaScale : 1);
+    const mouth = SIZE.fit * (megaUsable ? megaScale(this.cfg.abilities.mega.level) : 1);
     const grow = { level: this.main.level, xp: this.main.xp };
     let r = radiusForLevel(grow.level);
     let fit = mouth * r;
@@ -765,10 +766,11 @@ export class World {
     let magR = 0;
     let pull = 0;
     if (H.main) {
+      // Range and pull follow the hole's own size, not Mega Mouth's: Mega widens the mouth only.
       const vortex = this.abilities.vortex.active > 0;
       const frac = magnetRangeFrac(this.cfg.magnetLevel) + (vortex ? ABILITY_LEVEL.vortexRange : 0);
-      magR = R * frac;
-      pull = magnetPull(R, this.cfg.magnetLevel) * (vortex ? ABILITY_LEVEL.vortexPull : 1);
+      magR = H.baseR * frac;
+      pull = magnetPull(H.baseR, this.cfg.magnetLevel) * (vortex ? ABILITY_LEVEL.vortexPull : 1);
     }
     const wobR = H.main ? Math.min(this.maxF, 2.5 * R + 6) * 0.8 : 0;
     const qr = R + Math.max(magR, wobR);
@@ -950,7 +952,7 @@ export class World {
     this.moveMain(dt);
     for (let i = 1; i < this.holes.length; i++) this.moveHelper(this.holes[i], dt);
 
-    const mega = this.abilities.mega.active > 0 ? ABILITY_LEVEL.megaScale : 1;
+    const mega = this.abilities.mega.active > 0 ? megaScale(this.cfg.abilities.mega.level) : 1;
     const kr = 1 - Math.exp(-5 * dt);
     const main = this.main;
     main.r += (main.baseR * mega - main.r) * kr;

@@ -25,6 +25,38 @@ function cfg(startSize = 0, mapCleared = false) {
   return buildRoundConfig(s);
 }
 
+describe('magnet', () => {
+  // A cone `dist` m from a size-13 hole (R 3.08 m) with Magnet 8 (reach 1.11 R = 3.42 m past the rim).
+  function magnetWorld(dist: number, mega: boolean) {
+    const b = new MapBuilder('suburb', 100, 1);
+    b.put('cone', dist, 0, 0, { force: true });
+    const map = b.build('#000', '#000', { sky: '#fff', fog: '#fff', sun: '#fff', hemiSky: '#fff', hemiGround: '#000', sunIntensity: 1 });
+    const s = defaultSave(0);
+    s.stats.rounds = 1;
+    s.upgrades.startSize = 12;
+    s.upgrades.magnet = 8;
+    s.abilities.mega = 1;
+    const w = new World(map, buildRoundConfig(s));
+    if (mega) {
+      w.abilities.mega.active = 5;
+      w.main.r = w.main.baseR * 1.35;
+    }
+    w.step(1 / 30);
+    return w.objects[0].x;
+  }
+
+  it('pulls edible props within reach of the rim', () => {
+    expect(magnetWorld(6, false)).toBeLessThan(6);
+    expect(magnetWorld(7, false)).toBe(7);
+  });
+
+  it('keeps its reach when Mega Mouth widens the mouth', () => {
+    // Mega moves the rim to 4.16 m; the band past it stays 3.42 m (it used to grow to 4.62 m, to 8.78 m).
+    expect(magnetWorld(8, true)).toBe(8);
+    expect(magnetWorld(7.4, true)).toBeLessThan(7.4);
+  });
+});
+
 describe('swallowing', () => {
   it('eats small objects under the hole and pays cash + XP', () => {
     const w = new World(tinyMap(), cfg());

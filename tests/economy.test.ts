@@ -18,7 +18,9 @@ import {
   lifetimeForDm,
   mapLockReason,
   mapMaxLevel,
+  megaScale,
   noteRound,
+  priceScale,
   radiusForLevel,
   roundTimeFor,
   singularityPreview,
@@ -76,7 +78,7 @@ describe('upgrades', () => {
     s.tier = 2;
     s.cash = upgradeCost('speed', 0) * 2;
     expect(buyUpgrade(s, 'speed', 1)).toBe(0);
-    expect(upgradeCost('speed', 0, 2)).toBeCloseTo(upgradeCost('speed', 0) * PRESTIGE.tierScale ** 2);
+    expect(upgradeCost('speed', 0, priceScale(s))).toBeCloseTo(upgradeCost('speed', 0) * PRESTIGE.tierScale ** 2);
   });
 
   it('cash value grows linearly with no milestone jumps', () => {
@@ -128,6 +130,12 @@ describe('maps', () => {
     expect(s.maps[MAPS[2].id]).toBe(false);
   });
 
+  it('Mega Mouth widens the mouth more with each level', () => {
+    expect(megaScale(0)).toBe(1);
+    expect(megaScale(1)).toBeCloseTo(1.35);
+    expect(megaScale(5)).toBeCloseTo(1.75);
+  });
+
   it('later maps need Singularities', () => {
     const s = defaultSave(0);
     const gated = MAPS.findIndex((m) => m.needsSingularities > 0);
@@ -137,6 +145,7 @@ describe('maps', () => {
     }
     expect(unlockMaps(s)).toEqual([]);
     expect(mapLockReason(s, MAPS[gated].id)).toContain('Singularit');
+    expect(mapLockReason(s, MAPS[gated].id)).toContain('(you have 0)');
     s.stats.prestiges = MAPS[gated].needsSingularities;
     expect(unlockMaps(s)).toEqual([MAPS[gated].id]);
   });
@@ -179,7 +188,7 @@ describe('maps', () => {
     // Core's late levels cost more DM than earlier tiers earn), reaching it still takes a round.
     const moon = MAPS[MAPS.length - 1];
     expect(moon.goal - buildRoundConfig(capped, moon.id).startLevel).toBeGreaterThanOrEqual(1);
-    expect(upgradeCost('startSize', 30, 50) / upgradeCost('startSize', 30, PRESTIGE.tierSizeCap) / PRESTIGE.tierScale ** (50 - PRESTIGE.tierSizeCap)).toBeCloseTo(1);
+    expect(upgradeCost('startSize', 30, priceScale(high)) / upgradeCost('startSize', 30, priceScale(capped)) / PRESTIGE.tierScale ** (50 - PRESTIGE.tierSizeCap)).toBeCloseTo(1);
   });
 
   it('caps the hole at a size that swallows every prop on the map, above the map goal', () => {

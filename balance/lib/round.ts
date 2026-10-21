@@ -125,7 +125,9 @@ export function runRound(spec: RoundSpec): RoundResult {
   const pilot = new Pilot(profile, view, spec.seed * 7919 + 17);
 
   const levelTimes: number[] = [];
-  const mainEats: { t: number; v: number }[] = [];
+  /** Main-hole swallows: step index and cash before combo. */
+  const mainEats: { step: number; v: number }[] = [];
+  let stepNo = 0;
   const eatenByLevel: Record<number, number> = {};
   const types = new Set<number>();
   let lastEat = 0;
@@ -161,6 +163,7 @@ export function runRound(spec: RoundSpec): RoundResult {
     const need = xpForLevel(levelBefore);
     const baseR = w.main.baseR;
     w.step(dt);
+    stepNo++;
     if (w.running && (quitCheck -= dt) <= 0) {
       quitCheck = 0.5;
       if (pilot.wantsQuit(w)) {
@@ -176,7 +179,7 @@ export function runRound(spec: RoundSpec): RoundResult {
         eatCash += e.cash;
         if (e.o.gold) goldCash += e.cash;
         if (e.hole !== 0) continue;
-        mainEats.push({ t: w.time, v: e.o.value * cfg.cashMult });
+        mainEats.push({ step: stepNo, v: e.o.value * cfg.cashMult });
         firstEat ??= w.time;
         const pl = levelToEat(e.o.f);
         eatenByLevel[pl] = (eatenByLevel[pl] ?? 0) + 1;
@@ -251,11 +254,15 @@ export function runRound(spec: RoundSpec): RoundResult {
     const win = COMBO.baseWindow + COMBO.windowPerLevel * c;
     const cap = COMBO.baseCap + COMBO.capPerLevel * c;
     let stack = 0;
-    let prev = -Infinity;
+    let prev = -1;
     let total = helperCash;
     for (const e of mainEats) {
-      stack = e.t - prev < win ? stack + 1 : 1;
-      prev = e.t;
+      // As World does: a swallow sets the timer to the window, and every step ends by taking dt off
+      // it (the same float steps, so a gap of exactly one window breaks the chain the same way).
+      let timer = prev < 0 ? 0 : win;
+      for (let k = prev; k >= 0 && k < e.step && timer > 0; k++) timer -= dt;
+      stack = timer > 0 ? stack + 1 : 1;
+      prev = e.step;
       total += e.v * comboMult(stack, cap);
     }
     cashByCombo.push(total * (1 + bonusFrac));

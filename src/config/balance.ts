@@ -98,22 +98,24 @@ export interface UpgradeDef {
 
 /**
  * Capped tracks with few, chunky levels (each one changes a round by ~10% or more). Costs grow
- * geometrically (base * growth^level) and no track has milestone multipliers.
+ * geometrically (base * growth^level) and no track has milestone multipliers. Every cash price
+ * here (abilities and helpers too) is in Suburb money: the shop multiplies it by the newest
+ * unlocked map's value multiplier and 4^tier (economy.ts, priceScale).
  */
 export const UPGRADES: UpgradeDef[] = [
-  { id: 'startSize', name: 'Starting Size', icon: '⭕', desc: 'Begin each round one size bigger.', base: 45, growth: 1.45, max: 45, unlockAt: 0 },
-  { id: 'speed', name: 'Speed', icon: '💨', desc: 'Glide around the map 8% faster.', base: 60, growth: 5, max: 8, unlockAt: 0 },
-  { id: 'cashValue', name: 'Cash Value', icon: '💰', desc: 'Everything you eat is worth 31% more.', base: 100, growth: 3.8, max: 10, unlockAt: 0 },
-  { id: 'roundTime', name: 'Round Time', icon: '⏱️', desc: '+10 seconds per round.', base: 400, growth: 9, max: 4, unlockAt: 0 },
-  { id: 'growth', name: 'Growth Rate', icon: '📈', desc: 'Gain size 10% faster.', base: 150, growth: 5.5, max: 6, unlockAt: 100 },
-  { id: 'magnet', name: 'Magnet', icon: '🧲', desc: 'Nearby edible props slide toward you.', base: 200, growth: 5, max: 8, unlockAt: 300 },
-  { id: 'combo', name: 'Combo Window', icon: '🔥', desc: 'Longer combo window and a higher combo cap.', base: 500, growth: 4.4, max: 8, unlockAt: 1500 },
-  { id: 'golden', name: 'Golden Touch', icon: '✨', desc: 'More props spawn golden. Golden props are worth x10.', base: 5000, growth: 4.4, max: 8, unlockAt: 15000 },
-  { id: 'offline', name: 'Offline Vault', icon: '🌙', desc: 'Earn for 1 more hour while you are away.', base: 3000, growth: 10, max: 4, unlockAt: 5000 },
+  { id: 'startSize', name: 'Starting Size', icon: '⭕', desc: 'Begin each round one size bigger.', base: 55, growth: 1.25, max: 45, unlockAt: 0 },
+  { id: 'speed', name: 'Speed', icon: '💨', desc: 'Glide around the map 8% faster.', base: 75, growth: 3.25, max: 8, unlockAt: 0 },
+  { id: 'cashValue', name: 'Cash Value', icon: '💰', desc: 'Everything you eat is worth 26% more.', base: 125, growth: 2.8, max: 10, unlockAt: 0 },
+  { id: 'roundTime', name: 'Round Time', icon: '⏱️', desc: '+10 seconds per round.', base: 500, growth: 2.8, max: 4, unlockAt: 0 },
+  { id: 'growth', name: 'Growth Rate', icon: '📈', desc: 'Gain size 10% faster.', base: 185, growth: 2.8, max: 6, unlockAt: 100 },
+  { id: 'magnet', name: 'Magnet', icon: '🧲', desc: 'Nearby edible props slide toward you.', base: 250, growth: 2.95, max: 8, unlockAt: 300 },
+  { id: 'combo', name: 'Combo Window', icon: '🔥', desc: 'Longer combo window and a higher combo cap.', base: 620, growth: 2.5, max: 8, unlockAt: 1500 },
+  { id: 'golden', name: 'Golden Touch', icon: '✨', desc: 'More props spawn golden. Golden props are worth x10.', base: 6200, growth: 2.35, max: 8, unlockAt: 15000 },
+  { id: 'offline', name: 'Offline Vault', icon: '🌙', desc: 'Earn for 1 more hour while you are away.', base: 3700, growth: 3, max: 4, unlockAt: 5000 },
 ];
 
 /** Golden props: chance per prop each round (base + per Golden Touch level) and value multiplier. */
-export const GOLDEN = { baseChance: 0.01, chancePerLevel: 0.0115, valueMul: 10 };
+export const GOLDEN = { baseChance: 0.01, chancePerLevel: 0.01, valueMul: 10 };
 
 /**
  * In-round random events (not in the hub demo). At round start each event the map
@@ -131,7 +133,7 @@ export const EVENTS = {
   stampede: { count: 18, duration: 18, speed: [5, 6.5] as [number, number] },
 };
 
-export const CASH_VALUE = { perLevel: 0.31 };
+export const CASH_VALUE = { perLevel: 0.26 };
 export const SPEED_PER_LEVEL = 0.08;
 export const GROWTH_PER_LEVEL = 0.1;
 
@@ -151,14 +153,14 @@ export const OFFLINE = {
 // ---------------------------------------------------------------- helper holes
 export const HELPERS = {
   unlockAt: 800,
-  countCosts: [2000, 5e4, 1e6, 2.5e7],
+  countCosts: [4400, 15000, 37000, 285000],
   levelBase: 5000,
-  levelGrowth: 3.5,
+  levelGrowth: 1.71,
   levelMax: 10,
   baseRadius: 0.7,
   radiusGrowth: 1.13,
   maxRadius: 2.4,
-  roundCashShare: 0.8,
+  roundCashShare: 0.84,
   speed: 5,
 };
 
@@ -181,20 +183,22 @@ export interface AbilityDef {
 }
 
 export const ABILITIES: AbilityDef[] = [
-  { id: 'dash', name: 'Dash', icon: '⚡', key: 'Space / 1', desc: 'Burst of speed.', unlockCost: 5000, unlockAt: 2500, duration: 0.6, cooldown: 7, startCharge: 1, maxLevel: 5 },
-  { id: 'vortex', name: 'Vortex', icon: '🌀', key: '2', desc: 'Powerful pull on everything edible nearby.', unlockCost: 1e5, unlockAt: 5e4, duration: 4, cooldown: 22, startCharge: 0.5, maxLevel: 5 },
-  { id: 'mega', name: 'Mega Mouth', icon: '👄', key: '3', desc: 'Temporarily grow 45% wider.', unlockCost: 2.97e6, unlockAt: 1.5e6, duration: 5, cooldown: 30, startCharge: 0.5, maxLevel: 5 },
+  { id: 'dash', name: 'Dash', icon: '⚡', key: 'Space / 1', desc: 'Burst of speed.', unlockCost: 20000, unlockAt: 2500, duration: 0.6, cooldown: 7, startCharge: 1, maxLevel: 5 },
+  { id: 'vortex', name: 'Vortex', icon: '🌀', key: '2', desc: 'Powerful pull on everything edible nearby.', unlockCost: 54000, unlockAt: 5e4, duration: 4, cooldown: 22, startCharge: 0.5, maxLevel: 5 },
+  { id: 'mega', name: 'Mega Mouth', icon: '👄', key: '3', desc: 'Temporarily grow wider: +35%, and +10% more per level.', unlockCost: 208000, unlockAt: 1.5e6, duration: 5, cooldown: 30, startCharge: 0.5, maxLevel: 5 },
 ];
 
 export const ABILITY_LEVEL = {
   costMul: 1,
-  costGrowth: 4,
+  costGrowth: 1.65,
   cooldownPerLevel: 0.12,
   durationPerLevel: 0.2,
   dashSpeed: 2.8,
   vortexRange: 3,
   vortexPull: 3,
-  megaScale: 1.45,
+  /** Mega Mouth radius x(megaScale + megaScalePerLevel * (level - 1)): x1.35 at level 1, x1.75 at 5. */
+  megaScale: 1.35,
+  megaScalePerLevel: 0.1,
 };
 
 // ---------------------------------------------------------------- maps
@@ -219,11 +223,11 @@ export interface MapDef {
 
 export const MAPS: MapDef[] = [
   { id: 'suburb', name: 'Sunny Suburb', icon: '🏡', blurb: 'Leafy streets, parks and cosy houses.', goal: 16, needsSingularities: 0, valueMul: 1, sizeOffset: 0, xpMul: 1, seed: 1101 },
-  { id: 'farm', name: 'Happy Farm', icon: '🚜', blurb: 'Barns, fields and lots of animals.', goal: 18, needsSingularities: 0, valueMul: 7.4, sizeOffset: 9, xpMul: 0.81, seed: 3303 },
-  { id: 'downtown', name: 'Downtown', icon: '🏙️', blurb: 'Busy avenues and towering skyscrapers.', goal: 25, needsSingularities: 0, valueMul: 57.5, sizeOffset: 16, xpMul: 0.63, seed: 2202 },
-  { id: 'harbor', name: 'Harbor', icon: '⚓', blurb: 'Containers, cranes and giant ships.', goal: 23, needsSingularities: 0, valueMul: 193, sizeOffset: 24, xpMul: 0.49, seed: 4404 },
-  { id: 'airport', name: 'Airport', icon: '✈️', blurb: 'Jets, hangars and a huge terminal.', goal: 27, needsSingularities: 1, valueMul: 1150, sizeOffset: 26, xpMul: 0.94, seed: 5505 },
-  { id: 'moon', name: 'Moon Base', icon: '🌙', blurb: 'Low gravity, big domes, suspicious cheese.', goal: 24, needsSingularities: 3, valueMul: 940, sizeOffset: 32, xpMul: 0.81, seed: 6606 },
+  { id: 'farm', name: 'Happy Farm', icon: '🚜', blurb: 'Barns, fields and lots of animals.', goal: 18, needsSingularities: 0, valueMul: 9.7, sizeOffset: 9, xpMul: 0.81, seed: 3303 },
+  { id: 'downtown', name: 'Downtown', icon: '🏙️', blurb: 'Busy avenues and towering skyscrapers.', goal: 25, needsSingularities: 0, valueMul: 50, sizeOffset: 16, xpMul: 0.63, seed: 2202 },
+  { id: 'harbor', name: 'Harbor', icon: '⚓', blurb: 'Containers, cranes and giant ships.', goal: 23, needsSingularities: 0, valueMul: 233, sizeOffset: 24, xpMul: 0.49, seed: 4404 },
+  { id: 'airport', name: 'Airport', icon: '✈️', blurb: 'Jets, hangars and a huge terminal.', goal: 27, needsSingularities: 1, valueMul: 870, sizeOffset: 26, xpMul: 0.94, seed: 5505 },
+  { id: 'moon', name: 'Moon Base', icon: '🌙', blurb: 'Low gravity, big domes, suspicious cheese.', goal: 24, needsSingularities: 3, valueMul: 1080, sizeOffset: 32, xpMul: 0.81, seed: 6606 },
 ];
 
 export const MAP_COMPLETE_BONUS = 0.25;
@@ -252,7 +256,7 @@ export const MAP_SIZE_MIN_SPAN = 0.15;
  * (uncapped, Moon Base would start at size 1 from about tier 33).
  */
 export const PRESTIGE = {
-  coef: 1.96,
+  coef: 1.75,
   divisor: 1e6,
   exponent: 0.25,
   bonusPerDm: 0.1,
@@ -339,4 +343,4 @@ export const LEGACY_SAVE_KEY = 'hungry-hole-save';
 export const BACKUP_SAVE_KEY = 'snack-hole-save-backup';
 /** A stored save that could not be read, kept as-is instead of being overwritten. */
 export const UNREADABLE_SAVE_KEY = 'snack-hole-save-unreadable';
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 4;

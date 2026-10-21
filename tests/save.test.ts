@@ -59,13 +59,6 @@ describe('loading untrusted saves', () => {
     expect(s.dmTotal).toBe(20);
   });
 
-  it('moves claimed Dark Matter onto the v5 curve, so the next Singularity pays no windfall', () => {
-    const s = migrate({ ...JSON.parse(serialize(defaultSave(0))), version: 4, dm: 2400, dmTotal: 18301, dmClaimed: 11438 }, 0);
-    expect(s.dmClaimed).toBe(12810);
-    expect(s.dm).toBe(2400);
-    expect(s.dmTotal).toBe(18301);
-  });
-
   it('floors a fractional version instead of skipping migrations', () => {
     const s = migrate({ version: 2.5, cash: 1e9, settings: { volume: 0.3 } }, 0);
     expect(s.cash).toBe(0);

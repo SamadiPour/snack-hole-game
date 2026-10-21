@@ -119,9 +119,20 @@ export function tierCostMul(tier: number): number {
   return Math.pow(PRESTIGE.tierScale, tier);
 }
 
-export function upgradeCost(id: UpgradeId, level: number, tier = 0): number {
+/**
+ * Every cash price is in the newest unlocked map's money: x its value multiplier, and x4 per
+ * Singularity tier like the payouts. Unlocking a map raises prices along with income, so the
+ * shop keeps something worth buying on every map. The cost functions below take this as `scale`.
+ */
+export function priceScale(save: SaveData): number {
+  let mul = 1;
+  for (const m of MAPS) if (save.maps[m.id]) mul = m.valueMul;
+  return mul * tierCostMul(save.tier);
+}
+
+export function upgradeCost(id: UpgradeId, level: number, scale = 1): number {
   const d = upgradeDef(id);
-  return geomCost(d.base, d.growth, level) * tierCostMul(tier);
+  return geomCost(d.base, d.growth, level) * scale;
 }
 
 /** Human-readable effect of an upgrade at a given level. */
@@ -211,11 +222,16 @@ export function abilityDuration(id: AbilityId, level: number): number {
   return d.duration * (1 + ABILITY_LEVEL.durationPerLevel * Math.max(0, level - 1));
 }
 
+/** Mega Mouth radius multiplier at an ability level (1 while locked). */
+export function megaScale(level: number): number {
+  return level <= 0 ? 1 : ABILITY_LEVEL.megaScale + ABILITY_LEVEL.megaScalePerLevel * (level - 1);
+}
+
 /** Cost to go from `level` to level+1 (level 0 = locked, so this is the unlock price). */
-export function abilityCost(id: AbilityId, level: number, tier = 0): number {
+export function abilityCost(id: AbilityId, level: number, scale = 1): number {
   const d = abilityDef(id);
   const base = level <= 0 ? d.unlockCost : d.unlockCost * ABILITY_LEVEL.costMul * Math.pow(ABILITY_LEVEL.costGrowth, level);
-  return base * tierCostMul(tier);
+  return base * scale;
 }
 
 export function isAbilityVisible(save: SaveData, d: AbilityDef): boolean {
@@ -224,12 +240,12 @@ export function isAbilityVisible(save: SaveData, d: AbilityDef): boolean {
 
 // ---------------------------------------------------------------- helpers
 
-export function helperCountCost(owned: number, tier = 0): number {
-  return (HELPERS.countCosts[owned] ?? Infinity) * tierCostMul(tier);
+export function helperCountCost(owned: number, scale = 1): number {
+  return (HELPERS.countCosts[owned] ?? Infinity) * scale;
 }
 
-export function helperLevelCost(level: number, tier = 0): number {
-  return geomCost(HELPERS.levelBase, HELPERS.levelGrowth, level) * tierCostMul(tier);
+export function helperLevelCost(level: number, scale = 1): number {
+  return geomCost(HELPERS.levelBase, HELPERS.levelGrowth, level) * scale;
 }
 
 // ---------------------------------------------------------------- offline
@@ -471,7 +487,7 @@ export function buyUpgrade(save: SaveData, id: UpgradeId, n: number): number {
   const room = d.max - lvl;
   const count = Math.min(n, room);
   if (count <= 0) return 0;
-  const cost = geomBulkCost(d.base, d.growth, lvl, count) * tierCostMul(save.tier);
+  const cost = geomBulkCost(d.base, d.growth, lvl, count) * priceScale(save);
   if (cost > save.cash) return 0;
   save.cash -= cost;
   save.upgrades[id] = lvl + count;
@@ -479,7 +495,7 @@ export function buyUpgrade(save: SaveData, id: UpgradeId, n: number): number {
 }
 
 export function buyHelper(save: SaveData): boolean {
-  const cost = helperCountCost(save.helpers, save.tier);
+  const cost = helperCountCost(save.helpers, priceScale(save));
   if (save.cash < cost) return false;
   save.cash -= cost;
   save.helpers += 1;
@@ -488,7 +504,7 @@ export function buyHelper(save: SaveData): boolean {
 
 export function buyHelperLevel(save: SaveData): boolean {
   if (save.helperLevel >= HELPERS.levelMax || save.helpers <= 0) return false;
-  const cost = helperLevelCost(save.helperLevel, save.tier);
+  const cost = helperLevelCost(save.helperLevel, priceScale(save));
   if (save.cash < cost) return false;
   save.cash -= cost;
   save.helperLevel += 1;
@@ -498,7 +514,7 @@ export function buyHelperLevel(save: SaveData): boolean {
 export function buyAbility(save: SaveData, id: AbilityId): boolean {
   const lvl = save.abilities[id];
   if (lvl >= abilityDef(id).maxLevel) return false;
-  const cost = abilityCost(id, lvl, save.tier);
+  const cost = abilityCost(id, lvl, priceScale(save));
   if (save.cash < cost) return false;
   save.cash -= cost;
   save.abilities[id] = lvl + 1;
@@ -514,7 +530,7 @@ export function mapLockReason(save: SaveData, id: MapId): string | null {
   if (idx <= 0) return null;
   const prev = MAPS[idx - 1];
   const need = MAPS[idx].needsSingularities;
-  if (save.stats.prestiges < need) return `Needs ${need} Singularit${need === 1 ? 'y' : 'ies'}`;
+  if (save.stats.prestiges < need) return `Needs ${need} Singularit${need === 1 ? 'y' : 'ies'} (you have ${save.stats.prestiges})`;
   if (!save.maps[prev.id]) return `Unlock ${prev.name} first`;
   if (save.mapLevel[prev.id] < prev.goal) return `Reach size ${prev.goal + 1} on ${prev.name}`;
   return null;

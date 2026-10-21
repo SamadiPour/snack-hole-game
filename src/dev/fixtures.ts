@@ -85,7 +85,7 @@ const FIXTURES: Record<string, (s: SaveData) => void> = {
     s.lifetimeCash = 2.41e21;
     s.dm = 2400;
     s.dmTotal = 18301;
-    s.dmClaimed = 12810;
+    s.dmClaimed = 11438;
     for (const u of DM_UPGRADES) s.dmUpgrades[u.id] = u.max;
     // Dense Core's late levels cost more DM than tier 12 has earned; leave them to buy.
     s.dmUpgrades.denseCore = 10;

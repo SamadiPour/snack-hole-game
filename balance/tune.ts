@@ -6,6 +6,7 @@
  *   npx tsx balance/tune.ts --gens 40 --tag a [--lambda 16] [--sigma 0.15] [--penalty 2] [--seeds 1,2]
  *   npx tsx balance/tune.ts --eval balance/data/tune-a.json --seeds 4-10   # score the best on fresh seeds
  *   npx tsx balance/tune.ts --gens 25 --tag d --x0 balance/data/tune-c-final.json --sigma 0.08   # warm start
+ *   npx tsx balance/tune.ts --gens 40 --tag f --only '^(upgrades|abilities|helpers)\.'          # a subset
  *
  * Writes balance/data/tune-<tag>.json: settings, every evaluation, the best candidate and its breakdown.
  */
@@ -13,7 +14,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { CMAES } from './lib/cmaes';
 import { loss, type LossResult } from './lib/loss';
 import { gitCommit } from './lib/meta';
-import { SEARCH, baselineValues, type Param } from './lib/params';
+import { SEARCH as ALL_SEARCH, baselineValues, type Param } from './lib/params';
 import { WorkerPool } from './lib/pool';
 import type { PlayResult, PlaySpec } from './lib/progress';
 
@@ -27,6 +28,9 @@ const LAMBDA = args.includes('--lambda') ? Number(opt('--lambda', '16')) : undef
 const SEEDS = seedList(opt('--seeds', '1,2'));
 const EVAL = opt('--eval', '');
 const MODEL = 'balance/data/model.json';
+/** --only <regex>: search just the parameters whose id matches (the rest stay at the config's values). */
+const ONLY = args.includes('--only') ? new RegExp(opt('--only', '')) : null;
+const SEARCH = ALL_SEARCH.filter((p) => !ONLY || ONLY.test(p.id));
 
 function seedList(spec: string): number[] {
   const out: number[] = [];
