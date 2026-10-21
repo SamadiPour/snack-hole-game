@@ -486,6 +486,7 @@ const msKeys: [keyof M.Milestones, string][] = [
   ['harbor', 'Harbor'],
   ['singularity', 'first Singularity'],
   ['airport', 'Airport'],
+  ['spaceport', 'Spaceport'],
   ['moon', 'Moon Base unlocked'],
   ['finish', 'Moon Base goal (finish)'],
 ];

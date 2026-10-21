@@ -7,6 +7,7 @@ import { generateFarm } from './farm';
 import { generateHarbor } from './harbor';
 import { fillLadder } from './ladder';
 import { generateMoon } from './moon';
+import { generateSpaceport } from './spaceport';
 import { generateSuburb } from './suburb';
 
 const GENERATORS: Record<MapId, (seed: number) => MapData> = {
@@ -15,6 +16,7 @@ const GENERATORS: Record<MapId, (seed: number) => MapData> = {
   farm: generateFarm,
   harbor: generateHarbor,
   airport: generateAirport,
+  spaceport: generateSpaceport,
   moon: generateMoon,
 };
 

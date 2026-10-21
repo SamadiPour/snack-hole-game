@@ -198,7 +198,7 @@ export const ABILITY_LEVEL = {
 };
 
 // ---------------------------------------------------------------- maps
-export type MapId = 'suburb' | 'downtown' | 'farm' | 'harbor' | 'airport' | 'moon';
+export type MapId = 'suburb' | 'downtown' | 'farm' | 'harbor' | 'airport' | 'spaceport' | 'moon';
 
 export interface MapDef {
   id: MapId;
@@ -223,6 +223,7 @@ export const MAPS: MapDef[] = [
   { id: 'downtown', name: 'Downtown', icon: '🏙️', blurb: 'Busy avenues and towering skyscrapers.', goal: 25, needsSingularities: 0, valueMul: 57.5, sizeOffset: 16, xpMul: 0.63, seed: 2202 },
   { id: 'harbor', name: 'Harbor', icon: '⚓', blurb: 'Containers, cranes and giant ships.', goal: 23, needsSingularities: 0, valueMul: 193, sizeOffset: 24, xpMul: 0.49, seed: 4404 },
   { id: 'airport', name: 'Airport', icon: '✈️', blurb: 'Jets, hangars and a huge terminal.', goal: 27, needsSingularities: 1, valueMul: 1150, sizeOffset: 26, xpMul: 0.94, seed: 5505 },
+  { id: 'spaceport', name: 'Spaceport', icon: '🚀', blurb: 'Launch towers, giant crawlers and rockets ready to fly.', goal: 28, needsSingularities: 2, valueMul: 960, sizeOffset: 29, xpMul: 0.87, seed: 7707 },
   { id: 'moon', name: 'Moon Base', icon: '🌙', blurb: 'Low gravity, big domes, suspicious cheese.', goal: 24, needsSingularities: 3, valueMul: 940, sizeOffset: 32, xpMul: 0.81, seed: 6606 },
 ];
 

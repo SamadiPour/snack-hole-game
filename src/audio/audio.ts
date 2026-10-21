@@ -581,6 +581,7 @@ const BEDS: Record<string, { freq: number; gain: number; rate: number; depth: nu
   farm: { freq: 300, gain: 0.22, rate: 0.06, depth: 0.55, sweep: 0.45 },
   harbor: { freq: 520, gain: 0.3, rate: 0.13, depth: 0.7, sweep: 0.35 },
   airport: { freq: 300, gain: 0.35, rate: 0.08, depth: 0.25, sweep: 0.1 },
+  spaceport: { freq: 460, gain: 0.3, rate: 0.1, depth: 0.5, sweep: 0.3 },
   moon: { freq: 140, gain: 0.35, rate: 0.08, depth: 0.15, sweep: 0.1 },
 };
 
@@ -589,4 +590,5 @@ const CRITTERS: Record<string, { kind: 'bird' | 'gull'; min: number; max: number
   farm: { kind: 'bird', min: 1.2, max: 4.5 },
   suburb: { kind: 'bird', min: 3, max: 8 },
   harbor: { kind: 'gull', min: 5, max: 12 },
+  spaceport: { kind: 'gull', min: 7, max: 16 },
 };

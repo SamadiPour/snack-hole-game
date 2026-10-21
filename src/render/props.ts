@@ -832,6 +832,210 @@ export const BUILDERS: Record<string, Builder> = {
     return g.build();
   },
 
+  // ------------------------------------------------------------ spaceport
+  hardhat: () =>
+    new G()
+      .cylB(0.21, 0.21, 0.04, 0, 0, 0, C.yellow, 12, { tint: true })
+      .boxB(0.1, 0.03, 0.24, 0.18, 0, 0, C.yellow, { tint: true })
+      .dome(0.16, 0, 0.04, 0, C.yellow, 12, 5, { tint: true })
+      .box(0.3, 0.05, 0.05, 0, 0.19, 0, C.yellow, { tint: true })
+      .build(),
+  engineer: () => person(C.white, { hat: C.yellow, tint: true }),
+  satellite: () => {
+    const g = new G();
+    g.cylB(0.06, 0.12, 0.3, 0, 0, 0, C.grey, 6);
+    g.boxB(0.5, 0.5, 0.5, 0, 0.3, 0, C.gold);
+    // Solar wings out along X on short struts.
+    for (const s of [-1, 1]) g.box(0.2, 0.04, 0.04, s * 0.35, 0.55, 0, C.lightgrey).box(0.34, 0.03, 0.9, s * 0.61, 0.55, 0, 0x22337a);
+    g.cone(0.22, 0.12, 0, 0.92, 0, C.white, 10, { rx: Math.PI }).cylB(0.02, 0.02, 0.3, 0, 0.86, 0, C.dark, 4);
+    return g.build();
+  },
+  gator: () => {
+    const g = new G();
+    const skin = 0x4f6b3a;
+    g.boxB(1.2, 0.3, 0.56, 0, 0.08, 0, skin);
+    g.boxB(0.55, 0.22, 0.4, 0.82, 0.08, 0, skin).boxB(0.36, 0.12, 0.3, 1.1, 0.08, 0, 0x5d7a45);
+    g.box(0.9, 0.16, 0.3, -0.85, 0.2, 0, skin);
+    for (const z of [-0.12, 0.12]) g.ball(0.07, 0.95, 0.33, z, C.yellow);
+    for (const x of [-0.4, 0.4]) for (const z of [-0.33, 0.33]) g.boxB(0.16, 0.12, 0.14, x, 0, z, skin);
+    // Ridged back.
+    for (let x = -0.45; x <= 0.46; x += 0.3) g.box(0.12, 0.08, 0.3, x, 0.42, 0, 0x3e5630);
+    return g.build();
+  },
+  balloon: () =>
+    new G()
+      .boxB(0.5, 0.3, 0.5, 0, 0, 0, C.grey)
+      .cylB(0.015, 0.015, 3.2, 0, 0.3, 0, C.dark, 4)
+      .boxB(0.3, 0.3, 0.3, 0, 3.5, 0, C.orange)
+      .cylB(0.015, 0.015, 0.6, 0, 3.8, 0, C.dark, 4)
+      .sphere(0.95, 0, 5.0, 0, C.white, 12, 9, { sy: 1.05, tint: true })
+      .build(),
+  buggy: () => {
+    const g = new G();
+    g.boxB(2.4, 0.4, 1.3, 0, 0.25, 0, C.white, { tint: true }).boxB(0.6, 0.35, 1.2, 0.85, 0.65, 0, C.white, { tint: true });
+    // Bench seat, its backrest, and a cargo box behind.
+    g.boxB(0.5, 0.45, 1.2, -0.1, 0.65, 0, C.navy).boxB(0.15, 0.6, 1.2, -0.35, 0.65, 0, C.navy).boxB(0.6, 0.4, 1.2, -0.85, 0.65, 0, C.grey);
+    for (const x of [-0.95, 0.75]) for (const z of [-0.6, 0.6]) g.cylB(0.04, 0.04, 0.95, x, 0.65, z, C.dark, 4);
+    g.boxB(2.2, 0.08, 1.4, -0.1, 1.6, 0, C.white, { tint: true });
+    g.box(0.05, 0.5, 1.2, 0.95, 1.25, 0, C.glass, { rz: -0.2 });
+    for (const x of [-0.8, 0.8]) for (const z of [-0.6, 0.6]) g.wheel(0.27, 0.2, x, 0.27, z);
+    return g.build();
+  },
+  rocketengine: () => {
+    const g = new G();
+    g.boxB(2.2, 0.3, 2.2, 0, 0, 0, C.yellow);
+    for (const x of [-0.9, 0.9]) for (const z of [-0.9, 0.9]) g.cylB(0.07, 0.07, 1.0, x, 0.3, z, C.dark, 6);
+    // Bell (wide end down), throat, then the turbopump and its feed pipes on top.
+    g.cylB(0.38, 1.0, 1.7, 0, 0.45, 0, C.dark, 16).cylB(1.03, 1.03, 0.1, 0, 0.45, 0, C.steel, 16);
+    g.cylB(0.45, 0.38, 0.5, 0, 2.15, 0, C.steel, 12).cylB(0.6, 0.6, 0.35, 0, 2.65, 0, C.gold, 12);
+    for (const z of [-0.45, 0.45]) g.cylB(0.12, 0.12, 0.9, 0.55, 1.75, z, C.lightgrey, 6);
+    return g.build();
+  },
+  capsule: () => {
+    const g = new G();
+    g.cylB(1.75, 1.8, 0.35, 0, 0, 0, C.brown, 16).cylB(0.55, 1.75, 2.2, 0, 0.35, 0, C.offwhite, 16);
+    g.cylB(0.5, 0.55, 0.45, 0, 2.55, 0, C.lightgrey, 12).cylB(0.3, 0.3, 0.2, 0, 3.0, 0, C.dark, 10);
+    // Windows set into the sloped side (tilted back with it).
+    for (const a of [0.3, 1.9, 4.4]) g.box(0.05, 0.32, 0.3, Math.cos(a) * 1.12, 1.55, Math.sin(a) * 1.12, C.glassDark, { ry: -a, rz: 0.5 });
+    return g.build();
+  },
+  astrovan: () => {
+    const g = new G();
+    const silver = 0xd8dde3;
+    g.boxB(6.0, 1.9, 2.3, 0, 0.45, 0, silver);
+    // Rounded roof: a cylinder along X, squashed to half its height.
+    g.cyl(1.15, 1.15, 5.8, 0, 2.35, 0, silver, 14, { rz: Math.PI / 2, sx: 0.5 });
+    g.box(5.9, 0.3, 2.32, 0, 1.0, 0, C.blue, { tint: true }).box(4.4, 0.55, 2.33, -0.5, 1.75, 0, C.glassDark);
+    g.box(0.06, 0.7, 1.9, 3.02, 1.8, 0, C.glass).box(0.06, 0.18, 0.4, 3.02, 0.9, -0.75, C.lamp).box(0.06, 0.18, 0.4, 3.02, 0.9, 0.75, C.lamp);
+    for (const x of [-2.0, 2.0]) for (const z of [-1.0, 1.0]) g.wheel(0.45, 0.3, x, 0.45, z);
+    return g.build();
+  },
+  cryotank: () => {
+    const g = new G();
+    g.cylB(4.3, 4.4, 0.4, 0, 0, 0, C.lightgrey, 16);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      g.cylB(0.22, 0.22, 4.8, Math.cos(a) * 3.3, 0.4, Math.sin(a) * 3.3, C.steel, 6);
+    }
+    g.sphere(4.2, 0, 5.6, 0, C.white, 16, 12).cyl(4.25, 4.25, 0.3, 0, 5.6, 0, C.steel, 16).cylB(0.7, 0.7, 0.2, 0, 9.75, 0, C.grey, 10);
+    g.cylB(0.3, 0.3, 5.6, 4.0, 0, 0, C.yellow, 6);
+    return g.build();
+  },
+  rocketstage: () => {
+    const g = new G();
+    // Stage lying on a transporter: flatbed, wheels, two cradles, then the stage along X.
+    g.boxB(19.4, 0.5, 3.6, 0, 0.3, 0, C.dark);
+    for (const x of [-8, -6.6, 6.6, 8]) for (const z of [-1.6, 1.6]) g.wheel(0.4, 0.4, x, 0.4, z);
+    for (const x of [-5, 5]) g.boxB(1.0, 1.0, 4.4, x, 0.8, 0, C.yellow);
+    g.cyl(2.1, 2.1, 16.5, 0.6, 2.9, 0, C.white, 16, { rz: Math.PI / 2 });
+    for (const x of [-4, 3]) g.cyl(2.13, 2.13, 1.2, x, 2.9, 0, C.dark, 16, { rz: Math.PI / 2 });
+    g.cyl(2.13, 2.13, 0.6, 8.55, 2.9, 0, C.lightgrey, 16, { rz: Math.PI / 2 });
+    // Five engine bells at the tail (-X), opening backward.
+    for (const [y, z] of [[2.9, 0], [4.0, 1.1], [4.0, -1.1], [1.8, 1.1], [1.8, -1.1]]) g.cone(0.55, 1.4, -8.35, y, z, C.dark, 10, { rz: -Math.PI / 2 });
+    return g.build();
+  },
+  launchtower: () => {
+    const g = new G();
+    const red = 0xd4542f;
+    g.boxB(10, 2, 10, 0, 0, 0, C.grey);
+    for (const x of [-3, 3]) for (const z of [-3, 3]) g.boxB(0.8, 54, 0.8, x, 2, z, red);
+    // Lattice: a ring of girders every 6 m, with a cross brace on each face.
+    for (let y = 8; y < 56; y += 6) {
+      for (const s of [-3, 3]) g.box(6.8, 0.5, 0.5, 0, y, s, red).box(0.5, 0.5, 6.8, s, y, 0, red);
+      if (y < 50) for (const s of [-3, 3]) g.box(8.4, 0.3, 0.3, 0, y + 3, s, red, { rz: Math.PI / 4 }).box(0.3, 0.3, 8.4, s, y + 3, 0, red, { rx: Math.PI / 4 });
+    }
+    // Swing arms reaching toward the rocket (+X).
+    for (const y of [20, 33, 45]) g.boxB(2.0, 1.4, 1.6, 4.0, y, 0, C.lightgrey);
+    g.boxB(7.5, 2, 7.5, 0, 56, 0, red).cylB(0.25, 0.25, 2, 0, 58, 0, C.lightgrey, 6);
+    return g.build();
+  },
+  telescope: () => {
+    const g = new G();
+    g.cylB(4, 4.5, 3, 0, 0, 0, C.offwhite, 12).cylB(2.5, 2.5, 3, 0, 3, 0, C.lightgrey, 10);
+    for (const z of [-3.5, 3.5]) g.boxB(1.2, 6, 1.2, 0, 6, z, C.offwhite);
+    g.box(1.6, 1.6, 8.2, 0, 12, 0, C.steel);
+    // Dish tilted up toward +X, with the receiver held out over its centre.
+    g.cone(8.6, 3.6, 0.8, 12, 0, C.white, 20, { rz: Math.PI / 2 + 0.6 });
+    g.box(5.2, 0.3, 0.3, 4.35, 14.43, 0, C.grey, { rz: 0.6 }).ball(0.6, 6.41, 15.84, 0, C.grey);
+    return g.build();
+  },
+  moonrocket: () => {
+    const g = new G();
+    g.boxB(12, 3, 12, 0, 0, 0, C.grey);
+    // First stage with its black roll pattern and fins, then the second and third stages.
+    g.cylB(4.6, 4.6, 40, 0, 3, 0, C.white, 16);
+    for (const y of [3, 37]) g.cylB(4.65, 4.65, 3, 0, y, 0, C.black, 16);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      g.boxB(1.6, 6, 0.3, Math.cos(a) * 5.2, 3, Math.sin(a) * 5.2, C.black, { ry: -a });
+    }
+    g.cylB(4.6, 4.6, 25, 0, 43, 0, C.white, 16).cylB(4.65, 4.65, 1.5, 0, 43, 0, C.black, 16);
+    g.cylB(3.3, 4.6, 4, 0, 68, 0, C.white, 16).cylB(3.3, 3.3, 16, 0, 72, 0, C.white, 16).cylB(3.35, 3.35, 2, 0, 80, 0, C.black, 16);
+    // Instrument ring, the capsule cone, then the red escape tower.
+    g.cylB(3.0, 3.3, 8, 0, 88, 0, C.offwhite, 16).cylB(1.0, 3.0, 5, 0, 96, 0, C.lightgrey, 16);
+    g.cylB(0.4, 0.4, 10, 0, 101, 0, 0xd4542f, 6).cone(0.6, 4, 0, 113, 0, 0xd4542f, 8);
+    return g.build();
+  },
+  missioncontrol: () => {
+    const g = new G();
+    g.boxB(34, 7, 22, 0, 0, 0, C.offwhite);
+    for (const y of [1.5, 4.3]) g.box(34.1, 1.4, 22.1, 0, y, 0, C.glassDark);
+    g.boxB(14, 3.5, 12, -4, 7, 0, C.lightgrey).box(14.1, 1.2, 12.1, -4, 8.8, 0, C.glass);
+    // Rooftop dishes and a mast.
+    for (const [x, z] of [[9, 5], [12, -6]]) g.cylB(0.15, 0.15, 1.2, x, 7, z, C.grey, 6).cone(1.5, 0.8, x, 8.4, z, C.white, 12, { rx: Math.PI });
+    g.cylB(0.15, 0.15, 1.5, -8, 10.5, 0, C.dark, 6);
+    g.boxB(2, 0.3, 8, 16, 3, 0, C.blue);
+    return g.build();
+  },
+  shuttle: () => {
+    const g = new G();
+    const fy = 4.5;
+    // Fuselage, nose cone with a black tip, and the black belly.
+    g.cyl(2.6, 2.6, 25, -1.5, fy, 0, C.white, 14, { rz: Math.PI / 2 });
+    g.cone(2.6, 6, 14, fy, 0, C.white, 14, { rz: -Math.PI / 2 }).cone(1.05, 2.4, 15.8, fy, 0, C.black, 14, { rz: -Math.PI / 2 });
+    g.box(24, 0.6, 4.6, -1.5, fy - 2.4, 0, C.black);
+    // Delta wing under the fuselage, black underneath.
+    g.bow(20, 0.6, 24, -14, fy - 1.6, 0, C.white).bow(20, 0.2, 24, -14, fy - 1.8, 0, C.black);
+    g.wedge(7, 10, 0.6, -10.5, fy + 2.4, 0, C.white);
+    for (const z of [-1.6, 1.6]) g.cyl(1.0, 1.0, 6, -11, fy + 1.8, z, C.offwhite, 10, { rz: Math.PI / 2 });
+    for (const [y, z] of [[fy + 1.2, 0], [fy - 0.6, -1.0], [fy - 0.6, 1.0]]) g.cone(0.9, 1.8, -14.9, y, z, C.dark, 10, { rz: -Math.PI / 2 });
+    g.box(1.2, 0.5, 2.4, 11.8, fy + 2.1, 0, C.glassDark, { rz: -0.4 }).box(14, 0.08, 0.1, -2, fy + 2.6, 0, C.lightgrey);
+    // Landing gear: nose leg and two main legs.
+    for (const [x, z] of [[10, 0], [-4, -3], [-4, 3]]) g.cylB(0.15, 0.15, fy - 2.4, x, 0, z, C.dark, 6).wheel(0.5, 0.4, x, 0.5, z);
+    return g.build();
+  },
+  crawler: () => {
+    const g = new G();
+    // Four track units at the corners, each with tread lines and a jacking block on top.
+    for (const x of [-13, 13]) {
+      for (const z of [-12, 12]) {
+        g.boxB(12, 2.6, 9, x, 0, z, C.dark);
+        for (let k = -5; k <= 5; k += 1.25) g.box(0.4, 2.7, 9.1, x + k, 1.3, z, 0x2a2d33);
+        g.boxB(5, 1.4, 6, x, 2.6, z, C.grey);
+      }
+    }
+    g.boxB(40, 2.4, 33, 0, 4.0, 0, C.lightgrey).box(40.1, 0.5, 33.1, 0, 5.6, 0, C.grey);
+    for (const [x, z] of [[18.4, -15.8], [-18.4, 15.8]]) g.boxB(3, 1.6, 3, x, 6.4, z, C.offwhite).box(0.1, 0.8, 2.6, x + Math.sign(x) * 1.55, 7.3, z, C.glass);
+    for (const x of [-4, 4]) g.cylB(0.5, 0.5, 1.6, x, 6.4, -14, C.dark, 8);
+    return g.build();
+  },
+  rockethall: () => {
+    const g = new G();
+    // High bay (the doors and a striped flag on its side) with the low bay against it on +X.
+    g.boxB(40, 59.4, 42, -6, 0, 0, C.offwhite).boxB(40.2, 0.6, 42.2, -6, 59.4, 0, C.lightgrey);
+    g.boxB(12, 22, 42, 20, 0, 0, C.offwhite).boxB(12.2, 0.6, 42.2, 20, 22, 0, C.lightgrey);
+    for (let x = -24; x <= 12; x += 6) g.boxB(0.6, 59.4, 42.2, x, 0, 0, C.lightgrey);
+    for (const x of [-18, -4]) {
+      for (const s of [-1, 1]) {
+        g.boxB(10, 52, 0.3, x, 0, s * 21.05, C.lightgrey);
+        for (let y = 4; y < 52; y += 4) g.box(10.05, 0.2, 0.35, x, y, s * 21.05, C.grey);
+      }
+    }
+    for (let k = 0; k < 7; k++) g.boxB(10, 2.6, 0.3, 8, 30 + k * 2.6, 21.15, k % 2 ? C.white : C.red);
+    g.boxB(4.4, 7.8, 0.35, 5.2, 40.4, 21.2, C.navy);
+    return g.build();
+  },
+
   // ------------------------------------------------------------ moon
   moonrock: () => new G().ball(0.5, 0, 0.22, 0, 0x8e8f97, 0, { sy: 0.55, sz: 0.85 }).build(),
   flag: () =>

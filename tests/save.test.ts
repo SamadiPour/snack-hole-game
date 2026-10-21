@@ -18,6 +18,13 @@ describe('loading untrusted saves', () => {
     expect(edited({ selectedMap: 'farm', maps: { suburb: true, farm: 'yes' } }).selectedMap).toBe('suburb');
   });
 
+  it('unlocks a map added before one the save has already unlocked', () => {
+    // A save from before the Spaceport: Moon Base unlocked, so it already passed the Spaceport's unlock point.
+    const s = edited({ maps: { suburb: true, farm: true, downtown: true, harbor: true, airport: true, moon: true } });
+    expect(s.maps.spaceport).toBe(true);
+    expect(edited({ maps: { suburb: true, farm: true, downtown: true, harbor: true, airport: true } }).maps.spaceport).toBe(false);
+  });
+
   it('drops infinite, negative and fractional counts anywhere in the save', () => {
     const s = edited({ helpers: 1e999, helperLevel: -3, cash: Number.NaN, upgrades: { speed: 2.7, startSize: 1e6 }, stats: { rounds: -1 } });
     expect(s.helpers).toBe(0);

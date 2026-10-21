@@ -85,7 +85,7 @@ export const CHECKS: CheckDef[] = [
     eval: (by) =>
       perSkill((s) => {
         let short = 0;
-        for (const m of ['farm', 'downtown', 'harbor', 'airport', 'moon'] as const) {
+        for (const m of ['farm', 'downtown', 'harbor', 'airport', 'spaceport', 'moon'] as const) {
           const v = M.median(by(s).map((r) => M.firstVisitRounds(r)[m] ?? NaN));
           if (v < 2) short++;
         }

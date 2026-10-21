@@ -6,6 +6,7 @@ import { generateDowntown } from '../src/core/mapgen/downtown';
 import { generateFarm } from '../src/core/mapgen/farm';
 import { generateHarbor } from '../src/core/mapgen/harbor';
 import { generateMoon } from '../src/core/mapgen/moon';
+import { generateSpaceport } from '../src/core/mapgen/spaceport';
 import { generateSuburb } from '../src/core/mapgen/suburb';
 
 const GENERATORS: Record<MapId, (seed: number) => MapData> = {
@@ -14,6 +15,7 @@ const GENERATORS: Record<MapId, (seed: number) => MapData> = {
   farm: generateFarm,
   harbor: generateHarbor,
   airport: generateAirport,
+  spaceport: generateSpaceport,
   moon: generateMoon,
 };
 
@@ -27,6 +29,7 @@ const PINNED: Record<MapId, string> = {
   farm: 'c4970a1a',
   harbor: '2eedbd16',
   airport: 'ecf080b7',
+  spaceport: 'e8a952db',
   moon: 'a0480040',
 };
 

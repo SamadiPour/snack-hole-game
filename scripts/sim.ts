@@ -556,7 +556,7 @@ function report(): void {
   // Moon Base needs 3 Singularities, so run 4 is the first that can reach it.
   const moonRun = runs.find((r) => r.mapAt.moon !== undefined);
   const moonClock = moonRun ? moonRun.start + moonRun.mapAt.moon! : Infinity;
-  check('all 6 maps reached', moonRun ? `${formatDuration(moonClock)} (run ${moonRun.run})` : 'not reached', moonRun?.run === 4);
+  check(`all ${MAPS.length} maps reached`, moonRun ? `${formatDuration(moonClock)} (run ${moonRun.run})` : 'not reached', moonRun?.run === 4);
 
   // Skill band: same saves, low- vs high-skill player, no shopping in between. Round cash varies a
   // lot with the world seed, so each side averages the same 8 world seeds.

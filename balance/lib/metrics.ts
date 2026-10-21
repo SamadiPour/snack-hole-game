@@ -25,6 +25,7 @@ export interface Milestones {
   harbor: number;
   singularity: number;
   airport: number;
+  spaceport: number;
   moon: number;
   finish: number;
 }
@@ -39,6 +40,7 @@ export function milestones(p: PlayResult): Milestones {
     harbor: first('map', 'Harbor'),
     singularity: first('singularity'),
     airport: first('map', 'Airport'),
+    spaceport: first('map', 'Spaceport'),
     moon: first('map', 'Moon Base'),
     finish: p.finish ?? NaN,
   };
