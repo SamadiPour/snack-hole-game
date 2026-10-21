@@ -20,6 +20,7 @@ Credited with thanks anyway.
 | Downtown | Funked Up | Joth | https://opengameart.org/content/funked-up | CC0 |
 | Harbor | Happy Vibes | Ruskerdax | https://opengameart.org/node/160228 | CC0 |
 | Airport | Funky House (first 32 bars, cut to loop without the fade-out) | Of Far Different Nature | https://opengameart.org/content/funky-house | CC0 |
+| Spaceport | Joyfully (loop version) | MintoDog | https://opengameart.org/content/joyfully | CC0 |
 | Moon Base | Cosmic Navigation (loop version) | Synth-thetic | https://opengameart.org/content/cosmic-navigation | CC0 |
 
 ## Fonts

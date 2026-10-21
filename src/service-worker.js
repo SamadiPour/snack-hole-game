@@ -6,7 +6,7 @@
  * - The page (navigations) is network-first, so a new deploy shows up on the next load and the
  *   cached copy only serves when offline.
  * - Hashed build files and the music never change under the same URL, so they are cache-first.
- *   Music is cached on first play (not precached: 5.5 MB) in its own cache, named after a hash of
+ *   Music is cached on first play (not precached: 6.2 MB) in its own cache, named after a hash of
  *   the music files, so it survives game updates until a track changes.
  */
 const CACHE = '__CACHE__';

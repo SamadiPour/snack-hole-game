@@ -2,7 +2,7 @@
  * Background music: one CC0 track per map (see CREDITS.md), streamed from public/music/,
  * looped without gaps and cross-faded when the map changes. Everything goes into the `out` bus
  * the Audio class owns (volume, mute, hub/pause ducking). Only the compressed files stay cached
- * (about 5.5 MB for all maps); just the playing track is kept decoded, since decoded PCM is ~10x
+ * (about 6.2 MB for all maps); just the playing track is kept decoded, since decoded PCM is ~10x
  * bigger and would add up to well over 100 MB on mobile.
  */
 
@@ -12,6 +12,7 @@ const TRACKS: Record<string, string> = {
   downtown: 'downtown.mp3',
   harbor: 'harbor.mp3',
   airport: 'airport.mp3',
+  spaceport: 'spaceport.mp3',
   moon: 'moon.mp3',
 };
 
