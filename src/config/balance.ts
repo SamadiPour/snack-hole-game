@@ -101,19 +101,19 @@ export interface UpgradeDef {
  * geometrically (base * growth^level) and no track has milestone multipliers.
  */
 export const UPGRADES: UpgradeDef[] = [
-  { id: 'startSize', name: 'Starting Size', icon: '⭕', desc: 'Begin each round one size bigger.', base: 45, growth: 1.65, max: 45, unlockAt: 0 },
-  { id: 'speed', name: 'Speed', icon: '💨', desc: 'Glide around the map 8% faster.', base: 60, growth: 4.5, max: 8, unlockAt: 0 },
-  { id: 'cashValue', name: 'Cash Value', icon: '💰', desc: 'Everything you eat is worth 25% more.', base: 100, growth: 3.5, max: 10, unlockAt: 0 },
-  { id: 'roundTime', name: 'Round Time', icon: '⏱️', desc: '+10 seconds per round.', base: 400, growth: 8, max: 4, unlockAt: 0 },
-  { id: 'growth', name: 'Growth Rate', icon: '📈', desc: 'Gain size 10% faster.', base: 150, growth: 5, max: 6, unlockAt: 100 },
-  { id: 'magnet', name: 'Magnet', icon: '🧲', desc: 'Nearby edible props slide toward you.', base: 200, growth: 4.5, max: 8, unlockAt: 300 },
-  { id: 'combo', name: 'Combo Window', icon: '🔥', desc: 'Longer combo window and a higher combo cap.', base: 500, growth: 4, max: 8, unlockAt: 1500 },
-  { id: 'golden', name: 'Golden Touch', icon: '✨', desc: 'More props spawn golden. Golden props are worth x10.', base: 5000, growth: 4, max: 8, unlockAt: 15000 },
+  { id: 'startSize', name: 'Starting Size', icon: '⭕', desc: 'Begin each round one size bigger.', base: 45, growth: 1.45, max: 45, unlockAt: 0 },
+  { id: 'speed', name: 'Speed', icon: '💨', desc: 'Glide around the map 8% faster.', base: 60, growth: 5, max: 8, unlockAt: 0 },
+  { id: 'cashValue', name: 'Cash Value', icon: '💰', desc: 'Everything you eat is worth 31% more.', base: 100, growth: 3.8, max: 10, unlockAt: 0 },
+  { id: 'roundTime', name: 'Round Time', icon: '⏱️', desc: '+10 seconds per round.', base: 400, growth: 9, max: 4, unlockAt: 0 },
+  { id: 'growth', name: 'Growth Rate', icon: '📈', desc: 'Gain size 10% faster.', base: 150, growth: 5.5, max: 6, unlockAt: 100 },
+  { id: 'magnet', name: 'Magnet', icon: '🧲', desc: 'Nearby edible props slide toward you.', base: 200, growth: 5, max: 8, unlockAt: 300 },
+  { id: 'combo', name: 'Combo Window', icon: '🔥', desc: 'Longer combo window and a higher combo cap.', base: 500, growth: 4.4, max: 8, unlockAt: 1500 },
+  { id: 'golden', name: 'Golden Touch', icon: '✨', desc: 'More props spawn golden. Golden props are worth x10.', base: 5000, growth: 4.4, max: 8, unlockAt: 15000 },
   { id: 'offline', name: 'Offline Vault', icon: '🌙', desc: 'Earn for 1 more hour while you are away.', base: 3000, growth: 10, max: 4, unlockAt: 5000 },
 ];
 
 /** Golden props: chance per prop each round (base + per Golden Touch level) and value multiplier. */
-export const GOLDEN = { baseChance: 0.01, chancePerLevel: 0.01, valueMul: 10 };
+export const GOLDEN = { baseChance: 0.01, chancePerLevel: 0.0115, valueMul: 10 };
 
 /**
  * In-round random events (not in the hub demo). At round start each event the map
@@ -131,7 +131,7 @@ export const EVENTS = {
   stampede: { count: 18, duration: 18, speed: [5, 6.5] as [number, number] },
 };
 
-export const CASH_VALUE = { perLevel: 0.25 };
+export const CASH_VALUE = { perLevel: 0.31 };
 export const SPEED_PER_LEVEL = 0.08;
 export const GROWTH_PER_LEVEL = 0.1;
 
@@ -158,7 +158,7 @@ export const HELPERS = {
   baseRadius: 0.7,
   radiusGrowth: 1.13,
   maxRadius: 2.4,
-  roundCashShare: 0.6,
+  roundCashShare: 0.8,
   speed: 5,
 };
 
@@ -183,7 +183,7 @@ export interface AbilityDef {
 export const ABILITIES: AbilityDef[] = [
   { id: 'dash', name: 'Dash', icon: '⚡', key: 'Space / 1', desc: 'Burst of speed.', unlockCost: 5000, unlockAt: 2500, duration: 0.6, cooldown: 7, startCharge: 1, maxLevel: 5 },
   { id: 'vortex', name: 'Vortex', icon: '🌀', key: '2', desc: 'Powerful pull on everything edible nearby.', unlockCost: 1e5, unlockAt: 5e4, duration: 4, cooldown: 22, startCharge: 0.5, maxLevel: 5 },
-  { id: 'mega', name: 'Mega Mouth', icon: '👄', key: '3', desc: 'Temporarily grow 45% wider.', unlockCost: 3e6, unlockAt: 1.5e6, duration: 5, cooldown: 30, startCharge: 0.5, maxLevel: 5 },
+  { id: 'mega', name: 'Mega Mouth', icon: '👄', key: '3', desc: 'Temporarily grow 45% wider.', unlockCost: 2.97e6, unlockAt: 1.5e6, duration: 5, cooldown: 30, startCharge: 0.5, maxLevel: 5 },
 ];
 
 export const ABILITY_LEVEL = {
@@ -219,11 +219,11 @@ export interface MapDef {
 
 export const MAPS: MapDef[] = [
   { id: 'suburb', name: 'Sunny Suburb', icon: '🏡', blurb: 'Leafy streets, parks and cosy houses.', goal: 16, needsSingularities: 0, valueMul: 1, sizeOffset: 0, xpMul: 1, seed: 1101 },
-  { id: 'farm', name: 'Happy Farm', icon: '🚜', blurb: 'Barns, fields and lots of animals.', goal: 19, needsSingularities: 0, valueMul: 6, sizeOffset: 8, xpMul: 0.81, seed: 3303 },
-  { id: 'downtown', name: 'Downtown', icon: '🏙️', blurb: 'Busy avenues and towering skyscrapers.', goal: 25, needsSingularities: 0, valueMul: 45, sizeOffset: 16, xpMul: 0.62, seed: 2202 },
-  { id: 'harbor', name: 'Harbor', icon: '⚓', blurb: 'Containers, cranes and giant ships.', goal: 24, needsSingularities: 0, valueMul: 236, sizeOffset: 22, xpMul: 0.47, seed: 4404 },
-  { id: 'airport', name: 'Airport', icon: '✈️', blurb: 'Jets, hangars and a huge terminal.', goal: 27, needsSingularities: 1, valueMul: 1000, sizeOffset: 31, xpMul: 0.8, seed: 5505 },
-  { id: 'moon', name: 'Moon Base', icon: '🌙', blurb: 'Low gravity, big domes, suspicious cheese.', goal: 25, needsSingularities: 3, valueMul: 1400, sizeOffset: 35, xpMul: 0.81, seed: 6606 },
+  { id: 'farm', name: 'Happy Farm', icon: '🚜', blurb: 'Barns, fields and lots of animals.', goal: 18, needsSingularities: 0, valueMul: 7.4, sizeOffset: 9, xpMul: 0.81, seed: 3303 },
+  { id: 'downtown', name: 'Downtown', icon: '🏙️', blurb: 'Busy avenues and towering skyscrapers.', goal: 25, needsSingularities: 0, valueMul: 57.5, sizeOffset: 16, xpMul: 0.63, seed: 2202 },
+  { id: 'harbor', name: 'Harbor', icon: '⚓', blurb: 'Containers, cranes and giant ships.', goal: 23, needsSingularities: 0, valueMul: 193, sizeOffset: 24, xpMul: 0.49, seed: 4404 },
+  { id: 'airport', name: 'Airport', icon: '✈️', blurb: 'Jets, hangars and a huge terminal.', goal: 27, needsSingularities: 1, valueMul: 1150, sizeOffset: 26, xpMul: 0.94, seed: 5505 },
+  { id: 'moon', name: 'Moon Base', icon: '🌙', blurb: 'Low gravity, big domes, suspicious cheese.', goal: 24, needsSingularities: 3, valueMul: 940, sizeOffset: 32, xpMul: 0.81, seed: 6606 },
 ];
 
 export const MAP_COMPLETE_BONUS = 0.25;
@@ -249,10 +249,10 @@ export const MAP_SIZE_MIN_SPAN = 0.15;
  * every such run raises the tier: maps start min(tier, tierSizeCap) sizes smaller, pay and cost
  * tierScale^tier times more, and Dark Matter gains are x(1 + tierDmBonus * tier). The size cap
  * keeps tiers endless: past it a tier only scales the numbers, so every map goal stays reachable
- * (uncapped, Moon Base would start at size 1 from about tier 30).
+ * (uncapped, Moon Base would start at size 1 from about tier 33).
  */
 export const PRESTIGE = {
-  coef: 1.75,
+  coef: 1.96,
   divisor: 1e6,
   exponent: 0.25,
   bonusPerDm: 0.1,
@@ -286,7 +286,7 @@ export interface DmUpgradeDef {
 export const DM_UPGRADES: DmUpgradeDef[] = [
   { id: 'eventHorizon', name: 'Event Horizon', icon: '🕳️', desc: '+25% cash per level.', base: 2, growth: 1.5, max: 20 },
   // Levels 11-20 (605 to 71.7K DM) are the late-game sink once the rest of the tree is maxed. At 20,
-  // maxed Starting Size starts Moon Base 5 sizes below its goal, so a tier-up still takes a round.
+  // maxed Starting Size starts Moon Base 1 size below its goal, so a tier-up still takes a round.
   { id: 'denseCore', name: 'Dense Core', icon: '🟣', desc: '+1 starting size per level.', base: 3, growth: 1.7, max: 20 },
   { id: 'headStart', name: 'Head Start', icon: '🎁', desc: 'Start each run with cash (x10 per level).', base: 2, growth: 2, max: 6 },
   { id: 'quantumHelpers', name: 'Quantum Helpers', icon: '👯', desc: 'Helper holes are 10% bigger and faster per level.', base: 3, growth: 1.8, max: 10 },
@@ -339,4 +339,4 @@ export const LEGACY_SAVE_KEY = 'hungry-hole-save';
 export const BACKUP_SAVE_KEY = 'snack-hole-save-backup';
 /** A stored save that could not be read, kept as-is instead of being overwritten. */
 export const UNREADABLE_SAVE_KEY = 'snack-hole-save-unreadable';
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;

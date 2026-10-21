@@ -225,6 +225,11 @@ const MIGRATIONS: Record<number, (d: Record<string, unknown>) => void> = {
   3: (d) => {
     if (typeof d.dmClaimed === 'number' && Number.isFinite(d.dmClaimed)) d.dmClaimed = Math.floor((d.dmClaimed * 1.75) / 2.5);
   },
+  // 4 -> 5: the coefficient went from 1.75 to 1.96 in the balance retune. Same fix as 3 -> 4, so the
+  // next Singularity does not pay the whole curve change at once.
+  4: (d) => {
+    if (typeof d.dmClaimed === 'number' && Number.isFinite(d.dmClaimed)) d.dmClaimed = Math.floor((d.dmClaimed * 1.96) / 1.75);
+  },
 };
 
 export function migrate(raw: unknown, now = Date.now()): SaveData {
