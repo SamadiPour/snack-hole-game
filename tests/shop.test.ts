@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ABILITIES, HELPERS, MAPS, OFFLINE, SKINS } from '../src/config/balance';
+import { ABILITIES, HELPERS, MAP_PRICE, MAPS, OFFLINE, SKINS } from '../src/config/balance';
 import { ACHIEVEMENTS, checkAchievements } from '../src/core/achievements';
 import { abilityCost, buyAbility, buyHelper, buyHelperLevel, cashBreakdown, computeOffline, helperCountCost, helperLevelCost, priceScale } from '../src/core/economy';
 import { defaultSave } from '../src/core/save';
@@ -65,8 +65,12 @@ describe('abilities', () => {
     const s = defaultSave(0);
     expect(priceScale(s)).toBe(1);
     s.maps.farm = true;
-    expect(priceScale(s)).toBe(MAPS[1].valueMul);
-    s.cash = helperCountCost(0) * MAPS[1].valueMul - 1;
+    const farm = Math.pow(MAPS[1].valueMul, MAP_PRICE.exp);
+    expect(priceScale(s)).toBe(farm);
+    // Prices rise with the map, but a little less than its payouts.
+    expect(farm).toBeGreaterThan(1);
+    expect(farm).toBeLessThanOrEqual(MAPS[1].valueMul);
+    s.cash = helperCountCost(0) * farm - 1;
     expect(buyHelper(s)).toBe(false);
     s.cash += 1;
     expect(buyHelper(s)).toBe(true);

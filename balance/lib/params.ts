@@ -7,7 +7,7 @@
  * `BASE` is the config as loaded, so the round model and Layer B can convert between baseline
  * units (what Layer A measured) and the tuned ones.
  */
-import { ABILITIES, ABILITY_LEVEL, CASH_VALUE, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, PRESTIGE, SIZE, UPGRADES, VALUE, type MapId, type UpgradeId } from '../../src/config/balance';
+import { ABILITIES, ABILITY_LEVEL, CASH_VALUE, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, MAP_PRICE, PRESTIGE, SIZE, UPGRADES, VALUE, type MapId, type UpgradeId } from '../../src/config/balance';
 import type { RoundConfig } from '../../src/core/economy';
 import type { SaveData } from '../../src/core/save';
 
@@ -81,6 +81,7 @@ P.push({
   get: () => ABILITIES[0].unlockCost / BASE.unlockCost[0],
   set: (k) => ABILITIES.forEach((a, i) => (a.unlockCost = BASE.unlockCost[i] * k)),
 });
+P.push({ id: 'prices.mapExp', group: 'prices', label: 'Prices: newest map value multiplier ^ k', lo: 0.75, hi: 1, get: () => MAP_PRICE.exp, set: (v) => (MAP_PRICE.exp = v) });
 P.push({ id: 'abilities.levelGrowth', group: 'prices', label: 'Abilities: price growth per level', lo: 1.3, hi: 3.5, get: () => ABILITY_LEVEL.costGrowth, set: (v) => (ABILITY_LEVEL.costGrowth = v) });
 P.push({
   id: 'helpers.countScale',

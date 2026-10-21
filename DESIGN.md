@@ -107,11 +107,14 @@ from that round. Ending it from the pause menu does count.
 Swallows within the window (`1.2 s + 0.15 s * comboLvl`) of the previous one stack.
 `comboMult = min(1 + 0.02 * (stack - 1), 2 + 0.15 * comboLvl)`.
 
-## Cash upgrades (`cost = base * growth^level * map * 4^tier`)
+## Cash upgrades (`cost = base * growth^level * map^0.95 * 4^tier`)
 
 Every cash price (upgrades, helpers, abilities) is in the newest unlocked map's money: `map` is
-that map's value multiplier (`priceScale`). Unlocking a map raises prices along with income, so
-the shop keeps something worth buying on every map; the bases below are Suburb prices.
+that map's value multiplier (`priceScale`), to the power `MAP_PRICE.exp` (0.95). Unlocking a map
+raises prices along with income, so the shop keeps something worth buying on every map; the power
+makes each jump a little smaller than the payout's (Farm x8.7 instead of x9.7, Moon Base x760
+instead of x1,080), which shortens the slow first rounds on a new map. The bases below are Suburb
+prices.
 
 Capped tracks with few, chunky levels and no milestone multipliers. One level is bought at a
 time (no bulk buy). Growth-type upgrades (Speed, Growth Rate, Magnet, Round Time) raise how many
@@ -166,7 +169,7 @@ is selected). Later maps also need Singularities.
 | Downtown | Farm goal | 26 | 31 | 50 | 16 | 0.63 |
 | Harbor | Downtown goal | 24 | 30 | 233 | 24 | 0.49 |
 | Airport | Harbor goal + 1 Singularity | 28 | 35 | 870 | 26 | 0.94 |
-| Spaceport | Airport goal + 2 Singularities | 29 | 36 | 970 | 29 | 0.87 |
+| Spaceport | Airport goal + 2 Singularities | 29 | 36 | 970 | 31 | 0.87 |
 | Moon Base | Spaceport goal + 3 Singularities | 25 | 30 | 1,080 | 32 | 0.81 |
 
 Goals, size offsets, XP and value multipliers were tuned with the simulators in `balance/`
@@ -257,31 +260,32 @@ after its last goal.
 
 | Seeds 1–10, median (range) | `--human` | `--good` |
 |---|---|---|
-| first Singularity | 58:02 (51:37–1h 16m) | 41:58 (31:59–53:15) |
-| Moon Base (run 4) | 2h 44m (2h 29m–2h 55m) | 2h 00m (1h 53m–2h 10m) |
-| run 2 rounds to the Harbor goal | 5.5 (2–16) | 3.5 (2–7) |
-| seconds per level after the first | 4.70–5.85 | 3.83–4.65 |
-| targets met | 9–13 of 22 | 10–12 of 22 |
+| first Singularity | 51:57 (33:41–1h 03m) | 37:33 (30:48–45:31) |
+| Moon Base (run 4) | 2h 25m (2h 11m–2h 34m) | 1h 45m (1h 35m–1h 51m) |
+| run 2 rounds to the Harbor goal | 4 (3–9) | 4 (2–5) |
+| seconds per level after the first | 5.05–5.90 | 3.90–4.40 |
+| targets met | 8–13 of 22 | 10–12 of 22 |
 
 Rounds to reach each map's goal, seed 1, `--human` (- = not reached that run):
 
-| Run | Suburb | Farm | Downtown | Harbor | Airport | Moon Base | Run length |
-|---|---|---|---|---|---|---|---|
-| 1 | 4 | 8 | 15 | - | | | 55:22 (32 rounds) |
-| 2 | 3 | 4 | 6 | 6 | - | | 56:56 (30) |
-| 3 | 2 | 3 | 4 | 2 | 8 | | 39:26 (22) |
-| 4 | 2 | 1 | 3 | 2 | 2 | 2 | 37:05 (24) |
-| 5 | 2 | 1 | 2 | 2 | 1 | 1 | 24:48 (16) |
-| 6 | 2 | 1 | 1 | 1 | 2 | 1 | 17:42 (12) |
+| Run | Suburb | Farm | Downtown | Harbor | Airport | Spaceport | Moon Base | Run length |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 4 | 8 | 11 | 12 | | | | 1h 03m (35 rounds) |
+| 2 | 2 | 5 | 5 | 3 | 8 | | | 42:39 (23) |
+| 3 | 2 | 2 | 2 | 2 | 4 | 1 | | 26:16 (15) |
+| 4 | 2 | 1 | 2 | 1 | 3 | 1 | 1 | 26:58 (18) |
+| 5 | 2 | 1 | 2 | 1 | 1 | 1 | 1 | 17:51 (12) |
+| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 12:32 (9) |
 
-Prices follow the newest map's value multiplier, so the shop never runs dry: shop visits buy 2–4
-items (target 1–3 for `--human`) and nothing is ever sold out. Goals sit below each map's XP
-ceiling. Misses: the cheapest option left costs 0.22–0.36 rounds of income (target 1–3), first
-visits take up to 17 rounds on Downtown and Harbor (target 2–8; prices jump with each new map
-before Starting Size catches up), later runs still reach most goals in 1–2 rounds (target 2–4),
-runs grind 6–27 rounds after their last goal while the DM gain climbs to the +50% hint, and the
-skill band. The players in `balance/` are slower (their average bot reaches the Moon Base goal in
-about 3h 15m): playtesting decides which is closer.
+Prices follow the newest map's value multiplier, so the shop rarely runs dry: shop visits buy 3–5
+items (target 1–3 for `--human`) and about 1% of visits find it sold out. Goals sit below each
+map's XP ceiling: from Harbor on, a goal is reached with 70–85% of the map eaten. Misses: the
+cheapest option left costs 0.19–0.31 rounds of income (target 1–3), first visits take up to 13
+rounds on Downtown and 12 on Harbor and Airport (target 2–8; prices jump with each new map before
+Starting Size catches up) but only 1–2 on the Spaceport and 1 on Moon Base, later runs still reach
+most goals in 1–2 rounds (target 2–4), runs grind 5–13 rounds after their last goal while the DM
+gain climbs to the +50% hint, and the skill band. The players in `balance/` are slower (their
+average bot reaches the Moon Base goal in about 2h 55m): playtesting decides which is closer.
 
 ## Architecture
 

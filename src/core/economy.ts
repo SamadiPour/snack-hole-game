@@ -12,6 +12,7 @@ import {
   MAGNET,
   MAPS,
   MAP_COMPLETE_BONUS,
+  MAP_PRICE,
   MAP_SIZE_HEADROOM,
   MAP_SIZE_MIN_SPAN,
   OFFLINE,
@@ -120,13 +121,14 @@ export function tierCostMul(tier: number): number {
 }
 
 /**
- * Every cash price is in the newest unlocked map's money: x its value multiplier, and x4 per
- * Singularity tier like the payouts. Unlocking a map raises prices along with income, so the
- * shop keeps something worth buying on every map. The cost functions below take this as `scale`.
+ * Every cash price is in the newest unlocked map's money: x its value multiplier (to the power
+ * MAP_PRICE.exp), and x4 per Singularity tier like the payouts. Unlocking a map raises prices along
+ * with income, so the shop keeps something worth buying on every map. The cost functions below take
+ * this as `scale`.
  */
 export function priceScale(save: SaveData): number {
   let mul = 1;
-  for (const m of MAPS) if (save.maps[m.id]) mul = m.valueMul;
+  for (const m of MAPS) if (save.maps[m.id]) mul = Math.pow(m.valueMul, MAP_PRICE.exp);
   return mul * tierCostMul(save.tier);
 }
 
