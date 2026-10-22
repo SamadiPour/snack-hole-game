@@ -23,5 +23,6 @@ screenshots/*
 films/
 itch/
 
-# Generated balance-tool data (balance/README.md says how to rebuild it)
+# Generated balance-tool data and reports (balance/README.md says how to rebuild them)
 balance/data/
+balance/reports/

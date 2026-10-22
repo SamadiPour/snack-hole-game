@@ -2,8 +2,9 @@
 
 Simulated players for Snack Hole's pacing, built on the real game code (`src/core/`). Re-run them
 after any change to `src/config/balance.ts`, `src/config/objects.ts` or a map generator.
-`ECONOMY.md` lists every formula; `reports/` holds the dated reports; `tuned/finalist.json` is the
-tuned set now written into the game (with the values it replaced).
+`ECONOMY.md` lists every formula; `report.ts` writes dated reports to `reports/` (gitignored, like
+`data/`; `notes/` keeps the numbers that matter); `tuned/finalist.json` is the tuned set now
+written into the game (with the values it replaced).
 
 ## After a content or balance change
 

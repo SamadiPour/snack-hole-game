@@ -178,8 +178,8 @@ is selected). Later maps also need Singularities.
 | Moon Base | Spaceport goal + 3 Singularities | 25 | 30 | 1,080 | 37 | 0.81 |
 
 Goals, size offsets, XP and value multipliers were tuned with the simulators in `balance/`
-(CMA-ES over simulated playthroughs; `balance/tuned/finalist.json`, report in
-`balance/reports/`). Goals sit below each map's XP ceiling: Harbor and Moon Base used to need the
+(CMA-ES over simulated playthroughs; `balance/tuned/finalist.json`, results in
+`balance/notes/`). Goals sit below each map's XP ceiling: Harbor and Moon Base used to need the
 last props of a full clear, which stalled most players a size short. Value multipliers rise map
 by map, since prices follow them. The Spaceport, added later, sits between Airport and Moon Base
 and unlocks with 2 Singularities (`balance/notes/spaceport.md`). Spaceport and Moon Base take 5
