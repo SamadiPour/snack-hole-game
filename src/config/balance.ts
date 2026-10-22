@@ -98,9 +98,9 @@ export interface UpgradeDef {
 
 /**
  * Capped tracks with few, chunky levels (each one changes a round by ~10% or more). Costs grow
- * geometrically (base * growth^level) and no track has milestone multipliers. Every cash price
- * here (abilities and helpers too) is in Suburb money: the shop multiplies it by the newest
- * unlocked map's value multiplier and 4^tier (economy.ts, priceScale).
+ * geometrically (base * growth^level) and no track has milestone multipliers. Every price here
+ * is in Suburb money: the shop multiplies it by the newest unlocked map's value multiplier and
+ * 4^tier (economy.ts, priceScale). Helper and ability prices are fixed instead (HELPERS, ABILITIES).
  */
 export const UPGRADES: UpgradeDef[] = [
   { id: 'startSize', name: 'Starting Size', icon: '⭕', desc: 'Begin each round one size bigger.', base: 55, growth: 1.25, max: 45, unlockAt: 0 },
@@ -153,9 +153,10 @@ export const OFFLINE = {
 // ---------------------------------------------------------------- helper holes
 export const HELPERS = {
   unlockAt: 800,
-  countCosts: [4400, 15000, 37000, 285000],
-  levelBase: 5000,
-  levelGrowth: 1.71,
+  /** Fixed cash prices, x4 per Singularity tier only: unlocking a map never raises them. */
+  countCosts: [38000, 617000, 6560000, 177000000],
+  levelBase: 132000,
+  levelGrowth: 2.51,
   levelMax: 10,
   baseRadius: 0.7,
   radiusGrowth: 1.13,
@@ -173,7 +174,11 @@ export interface AbilityDef {
   icon: string;
   key: string;
   desc: string;
+  /** Fixed cash prices, x4 per Singularity tier only: unlocking a map never raises them. */
   unlockCost: number;
+  /** Price of level 2; each later level costs levelGrowth times the one before. */
+  levelCost: number;
+  levelGrowth: number;
   unlockAt: number;
   duration: number;
   cooldown: number;
@@ -183,14 +188,12 @@ export interface AbilityDef {
 }
 
 export const ABILITIES: AbilityDef[] = [
-  { id: 'dash', name: 'Dash', icon: '⚡', key: 'Space / 1', desc: 'Burst of speed.', unlockCost: 20000, unlockAt: 2500, duration: 0.6, cooldown: 7, startCharge: 1, maxLevel: 5 },
-  { id: 'vortex', name: 'Vortex', icon: '🌀', key: '2', desc: 'Powerful pull on everything edible nearby.', unlockCost: 54000, unlockAt: 5e4, duration: 4, cooldown: 22, startCharge: 0.5, maxLevel: 5 },
-  { id: 'mega', name: 'Mega Mouth', icon: '👄', key: '3', desc: 'Temporarily grow wider: +35%, and +10% more per level.', unlockCost: 208000, unlockAt: 1.5e6, duration: 5, cooldown: 30, startCharge: 0.5, maxLevel: 5 },
+  { id: 'dash', name: 'Dash', icon: '⚡', key: 'Space / 1', desc: 'Burst of speed.', unlockCost: 300000, levelCost: 2.67e6, levelGrowth: 3.25, unlockAt: 2500, duration: 0.6, cooldown: 7, startCharge: 1, maxLevel: 5 },
+  { id: 'vortex', name: 'Vortex', icon: '🌀', key: '2', desc: 'Powerful pull on everything edible nearby.', unlockCost: 2.22e6, levelCost: 7.41e6, levelGrowth: 3.34, unlockAt: 5e4, duration: 4, cooldown: 22, startCharge: 0.5, maxLevel: 5 },
+  { id: 'mega', name: 'Mega Mouth', icon: '👄', key: '3', desc: 'Temporarily grow wider: +35%, and +10% more per level.', unlockCost: 36.9e6, levelCost: 85.6e6, levelGrowth: 2.32, unlockAt: 1.5e6, duration: 5, cooldown: 30, startCharge: 0.5, maxLevel: 5 },
 ];
 
 export const ABILITY_LEVEL = {
-  costMul: 1,
-  costGrowth: 1.65,
   cooldownPerLevel: 0.12,
   durationPerLevel: 0.2,
   dashSpeed: 2.8,

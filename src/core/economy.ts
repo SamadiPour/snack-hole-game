@@ -121,8 +121,8 @@ export function tierCostMul(tier: number): number {
 }
 
 /**
- * Every cash price is in the newest unlocked map's money: x its value multiplier (to the power
- * MAP_PRICE.exp), and x4 per Singularity tier like the payouts. Unlocking a map raises prices along
+ * Upgrade prices are in the newest unlocked map's money: x its value multiplier (to the power
+ * MAP_PRICE.exp), and x4 per Singularity tier like the payouts. Unlocking a map raises them along
  * with income, so the shop keeps something worth buying on every map. The cost functions below take
  * this as `scale`.
  */
@@ -130,6 +130,14 @@ export function priceScale(save: SaveData): number {
   let mul = 1;
   for (const m of MAPS) if (save.maps[m.id]) mul = Math.pow(m.valueMul, MAP_PRICE.exp);
   return mul * tierCostMul(save.tier);
+}
+
+/**
+ * Helper and ability prices are fixed, x4 per Singularity tier only: they are big one-off goals,
+ * and a price the player is saving up for should not jump when a map unlocks.
+ */
+export function fixedPriceScale(save: SaveData): number {
+  return tierCostMul(save.tier);
 }
 
 export function upgradeCost(id: UpgradeId, level: number, scale = 1): number {
@@ -232,8 +240,7 @@ export function megaScale(level: number): number {
 /** Cost to go from `level` to level+1 (level 0 = locked, so this is the unlock price). */
 export function abilityCost(id: AbilityId, level: number, scale = 1): number {
   const d = abilityDef(id);
-  const base = level <= 0 ? d.unlockCost : d.unlockCost * ABILITY_LEVEL.costMul * Math.pow(ABILITY_LEVEL.costGrowth, level);
-  return base * scale;
+  return (level <= 0 ? d.unlockCost : d.levelCost * Math.pow(d.levelGrowth, level - 1)) * scale;
 }
 
 export function isAbilityVisible(save: SaveData, d: AbilityDef): boolean {
@@ -497,7 +504,7 @@ export function buyUpgrade(save: SaveData, id: UpgradeId, n: number): number {
 }
 
 export function buyHelper(save: SaveData): boolean {
-  const cost = helperCountCost(save.helpers, priceScale(save));
+  const cost = helperCountCost(save.helpers, fixedPriceScale(save));
   if (save.cash < cost) return false;
   save.cash -= cost;
   save.helpers += 1;
@@ -506,7 +513,7 @@ export function buyHelper(save: SaveData): boolean {
 
 export function buyHelperLevel(save: SaveData): boolean {
   if (save.helperLevel >= HELPERS.levelMax || save.helpers <= 0) return false;
-  const cost = helperLevelCost(save.helperLevel, priceScale(save));
+  const cost = helperLevelCost(save.helperLevel, fixedPriceScale(save));
   if (save.cash < cost) return false;
   save.cash -= cost;
   save.helperLevel += 1;
@@ -516,7 +523,7 @@ export function buyHelperLevel(save: SaveData): boolean {
 export function buyAbility(save: SaveData, id: AbilityId): boolean {
   const lvl = save.abilities[id];
   if (lvl >= abilityDef(id).maxLevel) return false;
-  const cost = abilityCost(id, lvl, priceScale(save));
+  const cost = abilityCost(id, lvl, fixedPriceScale(save));
   if (save.cash < cost) return false;
   save.cash -= cost;
   save.abilities[id] = lvl + 1;

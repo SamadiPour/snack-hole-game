@@ -7,7 +7,7 @@
  * `BASE` is the config as loaded, so the round model and Layer B can convert between baseline
  * units (what Layer A measured) and the tuned ones.
  */
-import { ABILITIES, ABILITY_LEVEL, CASH_VALUE, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, MAP_PRICE, PRESTIGE, SIZE, UPGRADES, VALUE, type MapId, type UpgradeId } from '../../src/config/balance';
+import { ABILITIES, CASH_VALUE, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, MAP_PRICE, PRESTIGE, SIZE, UPGRADES, VALUE, type MapId, type UpgradeId } from '../../src/config/balance';
 import type { RoundConfig } from '../../src/core/economy';
 import type { SaveData } from '../../src/core/save';
 
@@ -40,7 +40,9 @@ export const BASE = {
   upgradeGrowth: Object.fromEntries(UPGRADES.map((u) => [u.id, u.growth])) as Record<UpgradeId, number>,
   upgradeBase: Object.fromEntries(UPGRADES.map((u) => [u.id, u.base])) as Record<UpgradeId, number>,
   unlockCost: ABILITIES.map((a) => a.unlockCost),
+  abilityGrowth: ABILITIES.map((a) => a.levelGrowth),
   helperCounts: [...HELPERS.countCosts],
+  helperLevelBase: HELPERS.levelBase,
   helperShare: HELPERS.roundCashShare,
   growthPerLevel: GROWTH_PER_LEVEL,
 };
@@ -82,7 +84,15 @@ P.push({
   set: (k) => ABILITIES.forEach((a, i) => (a.unlockCost = BASE.unlockCost[i] * k)),
 });
 P.push({ id: 'prices.mapExp', group: 'prices', label: 'Prices: newest map value multiplier ^ k', lo: 0.75, hi: 1, get: () => MAP_PRICE.exp, set: (v) => (MAP_PRICE.exp = v) });
-P.push({ id: 'abilities.levelGrowth', group: 'prices', label: 'Abilities: price growth per level', lo: 1.3, hi: 3.5, get: () => ABILITY_LEVEL.costGrowth, set: (v) => (ABILITY_LEVEL.costGrowth = v) });
+P.push({
+  id: 'abilities.levelGrowthScale',
+  group: 'prices',
+  label: 'Abilities: price growth per level scale (growth = 1 + (g - 1) x k)',
+  lo: 0.5,
+  hi: 1.5,
+  get: () => (ABILITIES[0].levelGrowth - 1) / (BASE.abilityGrowth[0] - 1),
+  set: (k) => ABILITIES.forEach((a, i) => (a.levelGrowth = 1 + (BASE.abilityGrowth[i] - 1) * k)),
+});
 P.push({
   id: 'helpers.countScale',
   group: 'prices',
@@ -93,6 +103,7 @@ P.push({
   get: () => HELPERS.countCosts[0] / BASE.helperCounts[0],
   set: (k) => BASE.helperCounts.forEach((c, i) => (HELPERS.countCosts[i] = c * k)),
 });
+P.push({ id: 'helpers.levelBaseScale', group: 'prices', label: 'Helper training: first level price x k', lo: 0.25, hi: 4, log: true, get: () => HELPERS.levelBase / BASE.helperLevelBase, set: (k) => (HELPERS.levelBase = BASE.helperLevelBase * k) });
 P.push({ id: 'helpers.levelGrowth', group: 'prices', label: 'Helper training: price growth per level', lo: 1.2, hi: 2.5, get: () => HELPERS.levelGrowth, set: (v) => (HELPERS.levelGrowth = v) });
 P.push({
   id: 'upgrades.growthScale',

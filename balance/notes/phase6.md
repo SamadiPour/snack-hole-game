@@ -96,3 +96,52 @@ shop gets cheap (the cheapest option left falls under 0.1 rounds of income) and 
 The game sim's misses at 0.95: more items per shop visit (3–4 for `--human`, target 1–3), and
 run 2 replays run 1's maps a little faster than its 50% target on 3 seeds. Report
 `2026-10-21T18-42-29-k95` with `compare.md` against `…18-18-34-o31b`.
+
+### Fixed helper and ability prices
+
+Playtest: ability prices climbed as the game went on. Every price followed the newest map, so
+the Mega Mouth unlock went from $208K on the Suburb to $8.6M once Downtown was unlocked and $129M
+on the Airport: a one-off goal the player was saving for kept running away. Helpers and abilities
+now have fixed cash prices, x4 per Singularity tier only (`fixedPriceScale`); upgrades still
+follow the newest map. Each ability has its own level growth.
+
+Two anchors, on real rounds against `MAP_PRICE.exp` 0.95 (`k95`), seeds 1–3:
+
+| Fixed prices set at | Loss | Moon Base goal, strong / average / weak (h) | Shop score |
+|---|---|---|---|
+| (map-scaled, before) | 27.6 | 1.74 / 2.97 / 5.74 | 8.3 |
+| where the average bot buys each item today (C1) | 31.3 | 1.48 / 2.75 / 5.68 | 8.9 |
+| C1 x1.5 / x2 | 33.2 / 32.0 | 1.63 / 2.65 / 5.72, 1.58 / 3.23 / 5.95 | 9.9 / 10.0 |
+| where each item becomes visible (C2: Dash $20K, Vortex $450K, Mega Mouth $8.5M) | 37.4 | 1.31 / 2.47 / 5.12 | 14.5 |
+
+C1 is in the game: unlocks Dash $822K, Vortex $2.22M, Mega Mouth $36.9M (level growth x3.25,
+x3.34, x2.32; Dash's unlock was later lowered, below), helpers $38K / $617K / $6.56M / $177M, training $132K x2.51 per level. The first
+purchases land where they did (Dash and Vortex on Downtown, Mega Mouth on Harbor in run 2,
+helpers on Farm, Downtown, Harbor and Airport).
+
+| C1 vs map-scaled | Before | After |
+|---|---|---|
+| Loss, fresh seeds 4–10 | 32.9 | 34.8 |
+| Moon Base goal, fresh seeds (h) | 1.67 / 2.92 / 5.96 | 1.49 / 2.72 / 5.83 |
+| Longest stretch without a noticeable upgrade, fresh seeds | 1 / 3 / 5 | 1 / 2 / 5 |
+| Game sim, Moon Base, `--human` / `--good` | 2h 25m / 1h 45m | 2h 05m / 1h 29m |
+| Game sim targets met | 8–13 / 10–12 | 9–13 / 11–13 |
+| Game sim items per shop visit | 3–4 / 4–5 | 4–6 / 5–7 |
+
+The game gets shorter: later in a run the fixed prices no longer climb, so the last levels and
+helpers come sooner. Most of the loss difference is one flickering check (a map whose first
+visit takes under 2 rounds) plus the shop. Raising the fixed prices did not bring the length back
+on these seeds.
+
+**Dash at $300K.** From the playtest: Dash should be buyable partway through Farm. Its unlock
+dropped from $822K to $300K; its levels keep their prices ($2.67M, then x3.25), so abilities now
+have a separate `levelCost` (the level-2 price). Farm pays about $75–100K a round mid-visit, and
+the average bot now buys Dash 25 min in on Farm instead of 35 min in on Downtown.
+
+| $300K Dash vs C1 | Before | After |
+|---|---|---|
+| Loss, seeds 1–3 / fresh seeds 4–10 | 31.3 / 34.8 | 28.4 / 32.5 |
+| Moon Base goal, seeds 1–3 (h) | 1.48 / 2.75 / 5.68 | 1.52 / 2.90 / 5.71 |
+| Longest content gap, average / weak, seeds 1–3 | 25 / 63 min | 20 / 49 min |
+| Game sim, Moon Base, `--human` / `--good` | 2h 05m / 1h 29m | 1h 58m / 1h 27m |
+| Game sim targets met | 9–13 / 11–13 | 10–14 / 10–13 |

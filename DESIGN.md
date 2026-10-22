@@ -109,12 +109,13 @@ Swallows within the window (`1.2 s + 0.15 s * comboLvl`) of the previous one sta
 
 ## Cash upgrades (`cost = base * growth^level * map^0.95 * 4^tier`)
 
-Every cash price (upgrades, helpers, abilities) is in the newest unlocked map's money: `map` is
-that map's value multiplier (`priceScale`), to the power `MAP_PRICE.exp` (0.95). Unlocking a map
-raises prices along with income, so the shop keeps something worth buying on every map; the power
-makes each jump a little smaller than the payout's (Farm x8.7 instead of x9.7, Moon Base x760
-instead of x1,080), which shortens the slow first rounds on a new map. The bases below are Suburb
-prices.
+Upgrade prices are in the newest unlocked map's money: `map` is that map's value multiplier
+(`priceScale`), to the power `MAP_PRICE.exp` (0.95). Unlocking a map raises them along with
+income, so the shop keeps something worth buying on every map; the power makes each jump a little
+smaller than the payout's (Farm x8.7 instead of x9.7, Moon Base x760 instead of x1,080), which
+shortens the slow first rounds on a new map. The bases below are Suburb prices. Helper and ability
+prices are fixed instead (x4 per tier only, `fixedPriceScale`): they are big one-off goals, and a
+price you are saving up for should not jump when a map unlocks.
 
 Capped tracks with few, chunky levels and no milestone multipliers. One level is bought at a
 time (no bulk buy). Growth-type upgrades (Speed, Growth Rate, Magnet, Round Time) raise how many
@@ -134,21 +135,25 @@ levels a round gains, so they are priced like size upgrades.
 
 ## Helper holes
 
-- Count 1–4, one-off costs `4.4K, 15K, 37K, 285K` (visible after $800).
-- Training level: `5,000 * 1.71^lvl` (max 10). Radius `0.7 * 1.13^lvl` (cap 2.4 m), +10% radius
+- Count 1–4, one-off costs `38K, 617K, 6.56M, 177M` (visible after $800). Fixed prices, set where
+  the simulated average player buys each one (Farm, Downtown, Harbor, Airport).
+- Training level: `132,000 * 2.51^lvl` (max 10). Radius `0.7 * 1.13^lvl` (cap 2.4 m), +10% radius
   and speed per Quantum Helpers level.
 - Helpers only work during rounds: they chase the nearest edible prop and earn 84% of its value.
   They earn nothing between rounds or offline.
 
 ## Abilities (unlock once, then level up to 5)
 
-| Ability | Key | Effect | Cooldown | Unlock cost |
-|---|---|---|---|---|
-| Dash | Space / 1 | x2.8 speed for 0.6 s | 7 s | $20K |
-| Vortex | 2 | magnet +300% range, x3 pull, 4 s | 22 s | $54K |
-| Mega Mouth | 3 | radius x1.35 (+0.1 per level), 5 s | 30 s | $208K |
+| Ability | Key | Effect | Cooldown | Unlock | Level 2 | Later levels |
+|---|---|---|---|---|---|---|
+| Dash | Space / 1 | x2.8 speed for 0.6 s | 7 s | $300K | $2.67M | x3.25 each |
+| Vortex | 2 | magnet +300% range, x3 pull, 4 s | 22 s | $2.22M | $7.41M | x3.34 each |
+| Mega Mouth | 3 | radius x1.35 (+0.1 per level), 5 s | 30 s | $36.9M | $85.6M | x2.32 each |
 
-Level cost `unlock * 1.65^lvl`; each level −12% cooldown, +20% duration (Mega Mouth also +10% radius).
+Fixed prices, set where the simulated average player buys each one (Vortex on Downtown, Mega
+Mouth on Harbor); Dash unlocks cheaper, partway through Farm, with its levels left where they
+were. Level cost `levelCost * growth^(lvl - 2)`; each level −12% cooldown, +20% duration (Mega
+Mouth also +10% radius).
 The magnet's range and pull follow the hole's own radius, so Mega Mouth widens the mouth but
 not the magnet's reach past the rim.
 Rounds start with Dash ready and Vortex / Mega Mouth half charged (`startCharge`), so the big
@@ -260,32 +265,33 @@ after its last goal.
 
 | Seeds 1–10, median (range) | `--human` | `--good` |
 |---|---|---|
-| first Singularity | 51:57 (33:41–1h 03m) | 37:33 (30:48–45:31) |
-| Moon Base (run 4) | 2h 25m (2h 11m–2h 34m) | 1h 45m (1h 35m–1h 51m) |
-| run 2 rounds to the Harbor goal | 4 (3–9) | 4 (2–5) |
-| seconds per level after the first | 5.05–5.90 | 3.90–4.40 |
-| targets met | 8–13 of 22 | 10–12 of 22 |
+| first Singularity | 46:51 (37:44–55:22) | 34:18 (28:47–41:15) |
+| Moon Base (run 4) | 1h 58m (1h 49m–2h 09m) | 1h 27m (1h 20m–1h 39m) |
+| run 2 rounds to the Harbor goal | 4 (1–6) | 3 (2–4) |
+| seconds per level after the first | 5.00–5.85 | 3.95–4.33 |
+| targets met | 10–14 of 22 | 10–13 of 22 |
 
 Rounds to reach each map's goal, seed 1, `--human` (- = not reached that run):
 
 | Run | Suburb | Farm | Downtown | Harbor | Airport | Spaceport | Moon Base | Run length |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 4 | 8 | 11 | 12 | | | | 1h 03m (35 rounds) |
-| 2 | 2 | 5 | 5 | 3 | 8 | | | 42:39 (23) |
-| 3 | 2 | 2 | 2 | 2 | 4 | 1 | | 26:16 (15) |
-| 4 | 2 | 1 | 2 | 1 | 3 | 1 | 1 | 26:58 (18) |
-| 5 | 2 | 1 | 2 | 1 | 1 | 1 | 1 | 17:51 (12) |
-| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 12:32 (9) |
+| 1 | 4 | 8 | 10 | 4 | | | | 44:52 (26 rounds) |
+| 2 | 3 | 2 | 4 | 4 | 3 | | | 29:25 (16) |
+| 3 | 2 | 2 | 1 | 3 | 3 | 1 | | 21:47 (12) |
+| 4 | 2 | 1 | 2 | 2 | 1 | 1 | 1 | 22:45 (15) |
+| 5 | 2 | 1 | 1 | 2 | 1 | 1 | 1 | 18:16 (12) |
+| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 11:09 (8) |
 
-Prices follow the newest map's value multiplier, so the shop rarely runs dry: shop visits buy 3–5
-items (target 1–3 for `--human`) and about 1% of visits find it sold out. Goals sit below each
-map's XP ceiling: from Harbor on, a goal is reached with 70–85% of the map eaten. Misses: the
-cheapest option left costs 0.19–0.31 rounds of income (target 1–3), first visits take up to 13
-rounds on Downtown and 12 on Harbor and Airport (target 2–8; prices jump with each new map before
-Starting Size catches up) but only 1–2 on the Spaceport and 1 on Moon Base, later runs still reach
-most goals in 1–2 rounds (target 2–4), runs grind 5–13 rounds after their last goal while the DM
-gain climbs to the +50% hint, and the skill band. The players in `balance/` are slower (their
-average bot reaches the Moon Base goal in about 2h 55m): playtesting decides which is closer.
+Upgrade prices follow the newest map's value multiplier, so the shop rarely runs dry: shop visits
+buy 4–7 items (target 1–3 for `--human`; fixed helper and ability prices get cheap on later maps)
+and about 1% of visits find it sold out. Goals sit below each map's XP ceiling: from Harbor on, a
+goal is reached with 70–85% of the map eaten. Misses: the cheapest option left costs 0.17–0.24
+rounds of income (target 1–3), first visits take up to 12 rounds on Downtown and 10 on Harbor
+(target 2–8; prices jump with each new map before Starting Size catches up) but only 1–3 on the
+Spaceport and 1 on Moon Base, later runs still reach most goals in 1–2 rounds (target 2–4), runs
+grind 3–9 rounds after their last goal while the DM gain climbs to the +50% hint, and the skill
+band. The players in `balance/` are slower (their average bot reaches the Moon Base goal in about
+2h 45m): playtesting decides which is closer.
 
 ## Architecture
 
