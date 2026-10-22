@@ -47,6 +47,13 @@ describe('loading untrusted saves', () => {
     expect(edited({ dmUpgrades: { denseCore: 1e9 } }).dm).toBe(edited({ dmUpgrades: { denseCore: 20 } }).dm);
   });
 
+  it('gives back Hawking Radiation levels at the price they were bought for', () => {
+    // 3 levels at 5, 10 and 20 DM became 1 level: levels 2 and 3 give back 10 + 20.
+    const s = edited({ dm: 0, dmUpgrades: { hawking: 3 } });
+    expect(s.dmUpgrades.hawking).toBe(1);
+    expect(s.dm).toBe(30);
+  });
+
   it('adds no keys the default save does not have, even on nested records', () => {
     const s = edited({ map100: { constructor: true, valueOf: 1, suburb: true }, upgrades: { __proto__: 5 } });
     expect(Object.keys(s.map100).sort()).toEqual(Object.keys(defaultSave(0).map100).sort());
