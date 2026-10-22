@@ -68,6 +68,10 @@ from that round. Ending it from the pause menu does count.
   has to sit near the start: the airport apron carries forklifts, big baggage dollies, follow-me
   cars and service vans for sizes 8–11, otherwise those sizes stalled for 10–30 s per level while
   the hole crossed to the landside trees.
+- Set pieces laid out around their own size (the airport's parked planes, hangars and terminal,
+  the Moon Base HQ and domes) get explicit scales, one per size level, so `fillLadder` leaves
+  them alone; a rescaled prop keeps its centre, so a plane shrunk later would no longer reach its
+  stand or jet bridge. `scripts/floorplan.ts` draws the result top-down to check.
 - Solid props (buildings, vehicles, silos, domes…: `solid` in `objects.ts`) block placement:
   scatter never puts props inside them, forced layouts drop small props whose core lands inside
   a solid 1.5x bigger, and wandering animals/people walk around them (1 m blocking raster that
@@ -350,7 +354,7 @@ tests/         vitest: format, economy, shop (helpers, abilities, trophies, offl
                builders, map size ladders
 scripts/       sim.ts (balance), smoke.mjs / shots.mjs / ui-shots.mjs (Playwright screenshots),
                profile.mjs (frame timings), devServer.mjs (each script starts its own Vite
-               unless given a URL)
+               unless given a URL), floorplan.ts (top-down map plans, `--props` for footprints)
 ```
 
 ### Rendering notes
