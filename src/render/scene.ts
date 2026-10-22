@@ -17,6 +17,11 @@ export type CameraMode = 'round' | 'hub';
 const SLOW_FRAME = 1 / 40;
 const SLOW_FOR = 3;
 const MIN_PIXEL_RATIO = 1;
+/**
+ * Auto quality's starting pixel ratio. Phones and tablets start at 1.5: still sharp on a small
+ * screen, with 44% fewer pixels to shade than 2, which keeps them from running hot.
+ */
+const AUTO_RATIO = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 1.5 : 2;
 
 const HELPER_SKIN: SkinDef = {
   id: 'helper',
@@ -63,7 +68,7 @@ export class GameRenderer {
   private scratch = new THREE.Vector3();
   private quality: Quality = 'auto';
   /** Pixel ratio cap from auto quality (steps down while frames run slow). */
-  private autoRatio = 2;
+  private autoRatio = AUTO_RATIO;
   private slowFor = 0;
   private avgFrame = 1 / 60;
   private dpr = window.devicePixelRatio;
@@ -100,11 +105,11 @@ export class GameRenderer {
     new ResizeObserver(() => this.resize()).observe(canvas);
   }
 
-  /** Render resolution: high = up to 2x, low = 1x with smaller shadow maps, auto adapts. */
+  /** Render resolution: high = up to 2x, low = 1x with smaller shadow maps, auto adapts (from AUTO_RATIO). */
   setQuality(q: Quality): void {
     if (q === this.quality) return;
     this.quality = q;
-    this.autoRatio = 2;
+    this.autoRatio = AUTO_RATIO;
     this.slowFor = 0;
     const size = q === 'low' ? 1024 : 2048;
     if (this.sun.shadow.mapSize.x !== size) {
@@ -116,11 +121,12 @@ export class GameRenderer {
   }
 
   /**
-   * Called once per frame with the real frame time. Auto quality lowers the pixel ratio a step at
-   * a time while frames stay slow; it also picks up a new devicePixelRatio (window moved to
-   * another screen).
+   * Called once per frame with the real frame time and the time the game aims to draw frames in
+   * (longer behind menus). Auto quality lowers the pixel ratio a step at a time while frames stay
+   * slower than both SLOW_FRAME and that budget; it also picks up a new devicePixelRatio (window
+   * moved to another screen).
    */
-  noteFrame(dt: number): void {
+  noteFrame(dt: number, budget: number): void {
     this.frameDt = dt;
     if (window.devicePixelRatio !== this.dpr) {
       this.dpr = window.devicePixelRatio;
@@ -130,7 +136,7 @@ export class GameRenderer {
     // A long frame counts as at most 50 ms: one hitch (GC, tab coming back) cannot step the
     // quality down, but a device that never gets under the game's 0.1 s frame cap still does.
     this.avgFrame += (Math.min(dt, 0.05) - this.avgFrame) * 0.1;
-    this.slowFor = this.avgFrame > SLOW_FRAME ? this.slowFor + dt : 0;
+    this.slowFor = this.avgFrame > Math.max(SLOW_FRAME, budget * 1.25) ? this.slowFor + dt : 0;
     if (this.slowFor < SLOW_FOR || this.pixelRatio() <= MIN_PIXEL_RATIO) return;
     this.autoRatio = Math.max(MIN_PIXEL_RATIO, this.pixelRatio() - 0.25);
     this.slowFor = 0;
@@ -276,6 +282,15 @@ export class GameRenderer {
       this.updateGoldAndEvents(dt, world);
       const ts = performance.now();
       this.objects.updateOcclusion(dt, mode === 'round' ? this.camera.position : null);
+      let shadowCam: THREE.Camera | null = null;
+      if (this.shadowsOn) {
+        // Aim the shadow camera now (render does it again) so culling sees this frame's.
+        this.sun.updateMatrixWorld();
+        this.sun.target.updateMatrixWorld();
+        this.sun.shadow.updateMatrices(this.sun);
+        shadowCam = this.sun.shadow.camera;
+      }
+      this.objects.cull(this.camera, shadowCam, this.camTarget.x, this.camTarget.z, this.camDist, this.time);
       this.objects.update(dt, this.time);
       this.syncMs += (performance.now() - ts - this.syncMs) * 0.05;
     }

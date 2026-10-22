@@ -27,6 +27,8 @@ import { toast } from './ui/toast';
 const MAX_FAILED_FRAMES = 30;
 /** Frame rate the game draws at on faster screens, unless graphics quality is High. */
 const TARGET_FPS = 60;
+/** Frame rate behind the hub, the pause menu and the results, where the world is only backdrop. */
+const MENU_FPS = 30;
 
 export class Game implements HubApi {
   save: SaveData;
@@ -47,6 +49,8 @@ export class Game implements HubApi {
   /** Previous animation callback, and the smoothed time between callbacks (the screen's refresh, ms). */
   private lastCallback = 0;
   private refreshMs = 1000 / 60;
+  /** Time between drawn frames that skipFrame aims for (s). */
+  private frameBudget = 1 / 60;
   private hubRestart = 0;
   private hiddenAt = 0;
   /** Open pause menu during a round; the simulation is frozen while set. */
@@ -324,14 +328,16 @@ export class Game implements HubApi {
    * On screens faster than TARGET_FPS (120 Hz laptops and phones, 144 Hz monitors) only every Nth
    * refresh is drawn, so the game runs near 60 fps instead of 120+: half the GPU work and heat,
    * and room for what else the GPU draws (at 120 fps full screen it lagged under the system's
-   * volume overlay). High quality draws every refresh.
+   * volume overlay). Behind menus it draws at MENU_FPS, which phones need to stay cool between
+   * rounds. High quality draws every refresh.
    */
   private skipFrame(now: number): boolean {
     const d = now - this.lastCallback;
     this.lastCallback = now;
     if (d > 0 && d < 50) this.refreshMs += (d - this.refreshMs) * 0.05;
-    if (this.save.settings.quality === 'high') return false;
-    const every = Math.max(1, Math.floor((1000 / TARGET_FPS + 0.5) / this.refreshMs));
+    const fps = this.state === 'round' && !this.pauseMenu ? TARGET_FPS : MENU_FPS;
+    const every = this.save.settings.quality === 'high' ? 1 : Math.max(1, Math.floor((1000 / fps + 0.5) / this.refreshMs));
+    this.frameBudget = (every * this.refreshMs) / 1000;
     return now - this.last < (every - 0.5) * this.refreshMs;
   }
 
@@ -391,7 +397,7 @@ export class Game implements HubApi {
         if ((w.percentEaten > 0.35 && this.hubRestart > 45) || this.hubRestart > 240) this.startDemo();
       }
     }
-    this.renderer.noteFrame(realDt);
+    this.renderer.noteFrame(realDt, this.frameBudget);
     this.renderer.render(paused ? 0 : realDt * timeScale, this.world, this.state === 'hub' ? 'hub' : 'round');
     if (w && this.state !== 'hub') this.hud.update(w, paused ? 0 : realDt);
     this.hub.update(realDt);

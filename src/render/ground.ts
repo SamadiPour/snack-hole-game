@@ -61,9 +61,15 @@ export class Ground {
       }
     };
 
-    // Outside apron, then the map's base colour, then every painted feature.
+    // Outside apron (a frame round the map, 1 m under its edge, so the map's pixels are not shaded
+    // one extra time), then the map's base colour, then every painted feature.
     c.set(map.outside);
-    rect(0, 0, map.size * 6, map.size * 6);
+    const out = map.size * 3;
+    const band = out - map.half + 1;
+    for (const k of [-1, 1]) {
+      rect(0, k * (out - band / 2), out * 2, band);
+      rect(k * (out - band / 2), 0, band, out * 2);
+    }
     c.set(map.base);
     rect(0, 0, map.size, map.size);
     for (const p of map.paint) paint(p);

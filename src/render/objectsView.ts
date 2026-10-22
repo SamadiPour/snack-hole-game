@@ -30,6 +30,8 @@ const _axis = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
 const _c = new THREE.Color();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+const _sphere = new THREE.Sphere();
+const _vp = new THREE.Matrix4();
 
 /** Opacity of a prop that hides the hole from the camera. */
 const GHOST_ALPHA = 0.45;
@@ -53,13 +55,40 @@ function meshKey(o: WObj): number {
   return o.t * 2 + (o.gold ? 1 : 0);
 }
 
-/** One InstancedMesh per prop type; syncs instance matrices from the simulation each frame. */
+/** Props still standing or falling; swallowed and not-yet-spawned ones are not drawn at all. */
+function drawable(o: WObj): boolean {
+  return o.state !== GONE && o.state !== DORMANT;
+}
+
+/** Last view the visible set was picked for (see cull). */
+interface CullView {
+  x: number;
+  z: number;
+  dist: number;
+  fov: number;
+  aspect: number;
+  frames: number;
+}
+
+/**
+ * One InstancedMesh per prop type; syncs instance matrices from the simulation each frame. A
+ * mesh draws only the props near the view (see cull), packed into its first `count` slots: a
+ * prop's slot is `o.inst`, -1 while it is not drawn.
+ */
 export class ObjectsView {
   readonly group = new THREE.Group();
   readonly material = createPropMaterial();
   readonly goldMaterial = createPropMaterial(true);
   /** Instanced mesh per prop type, golden props in their own mesh: key = type * 2 + gold. */
   private meshes = new Map<number, THREE.InstancedMesh>();
+  /** The props each mesh draws, in slot order. */
+  private slots = new Map<number, WObj[]>();
+  /** Camera and sun shadow frustums the visible set was picked with; null draws everything. */
+  private view: THREE.Frustum | null = null;
+  private shadowView: THREE.Frustum | null = null;
+  /** Bounding spheres grow by this much, so the set stays right while the camera moves on. */
+  private margin = 0;
+  private cullView: CullView = { x: NaN, z: NaN, dist: 0, fov: 0, aspect: 0, frames: 0 };
   private world: World | null = null;
   private ghosts = new Map<WObj, Ghost>();
   private ghostPool: Ghost[] = [];
@@ -78,27 +107,82 @@ export class ObjectsView {
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       mesh.frustumCulled = false;
       this.meshes.set(key, mesh);
+      this.slots.set(key, []);
       this.group.add(mesh);
     }
-    const next = new Map<number, number>();
-    for (const o of world.objects) {
-      const key = meshKey(o);
-      const i = next.get(key) ?? 0;
-      next.set(key, i + 1);
-      o.inst = i;
-      const mesh = this.meshes.get(key)!;
-      mesh.setColorAt(i, _c.setHex(o.tint));
-      this.writeMatrix(mesh, o, 0);
+    // No view yet: every prop gets a slot until the first cull().
+    this.view = this.shadowView = null;
+    this.cullView.x = NaN;
+    this.refill(0);
+  }
+
+  /** Is the prop's bounding sphere (plus the margin) in the camera's or the shadow's view? */
+  private inView(o: WObj): boolean {
+    if (!this.view) return true;
+    _sphere.center.set(o.x, o.y + o.h * 0.5, o.z);
+    _sphere.radius = Math.hypot(o.f, o.h * 0.5) + this.margin;
+    return this.view.intersectsSphere(_sphere) || (this.shadowView !== null && this.shadowView.intersectsSphere(_sphere));
+  }
+
+  /** Gives every drawable prop in view a slot, in object order, and rewrites all slots. */
+  private refill(time: number): void {
+    for (const list of this.slots.values()) list.length = 0;
+    for (const o of this.world!.objects) {
+      o.inst = -1;
       o.dirty = false;
+      if (drawable(o) && this.inView(o)) this.addSlot(o, time);
+      else if (this.ghosts.has(o)) this.writeMatrix(this.meshes.get(meshKey(o))!, o, time);
     }
-    for (const mesh of this.meshes.values()) {
+    for (const [key, mesh] of this.meshes) {
+      mesh.count = this.slots.get(key)!.length;
+      mesh.visible = mesh.count > 0;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
   }
 
+  private addSlot(o: WObj, time: number): void {
+    const key = meshKey(o);
+    const mesh = this.meshes.get(key)!;
+    const list = this.slots.get(key)!;
+    o.inst = list.length;
+    list.push(o);
+    mesh.count = list.length;
+    mesh.visible = true;
+    mesh.setColorAt(o.inst, _c.setHex(o.tint));
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    this.writeMatrix(mesh, o, time);
+  }
+
+  /**
+   * Picks the props to draw: those whose bounding sphere meets the camera's view or, with
+   * shadows on, the sun's shadow camera (props just out of sight still cast shadows into it). The
+   * spheres grow by a margin, so the set is picked again only after the view moved about half of
+   * it, zoomed, or every half second, instead of every frame.
+   */
+  cull(camera: THREE.PerspectiveCamera, shadowCamera: THREE.Camera | null, x: number, z: number, dist: number, time: number): void {
+    if (!this.world) return;
+    const c = this.cullView;
+    const margin = 4 + dist * 0.15;
+    const moved = Math.hypot(x - c.x, z - c.z);
+    if (moved < margin * 0.5 && Math.abs(dist - c.dist) < dist * 0.05 && Math.abs(camera.fov - c.fov) < 1 && camera.aspect === c.aspect && ++c.frames < 30) return;
+    Object.assign(c, { x, z, dist, fov: camera.fov, aspect: camera.aspect, frames: 0 });
+    this.margin = margin;
+    camera.updateMatrixWorld();
+    this.view ??= new THREE.Frustum();
+    this.view.setFromProjectionMatrix(_vp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    if (shadowCamera) {
+      shadowCamera.updateMatrixWorld();
+      this.shadowView ??= new THREE.Frustum();
+      this.shadowView.setFromProjectionMatrix(_vp.multiplyMatrices(shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse));
+    } else this.shadowView = null;
+    this.refill(time);
+  }
+
   setShadows(on: boolean): void {
     this.shadows = on;
+    // Shadows add the props that are out of sight but cast into it: pick the set again.
+    this.cullView.x = NaN;
     for (const m of this.meshes.values()) {
       m.castShadow = on;
       m.receiveShadow = on;
@@ -109,9 +193,10 @@ export class ObjectsView {
     }
   }
 
+  /** Writes the prop's slot (when it has one) and its see-through copy (when it has one). */
   private writeMatrix(mesh: THREE.InstancedMesh, o: WObj, time: number): void {
     if (o.state === GONE || o.state === DORMANT) {
-      mesh.setMatrixAt(o.inst, ZERO);
+      if (o.inst >= 0) mesh.setMatrixAt(o.inst, ZERO);
       return;
     }
     _qy.setFromAxisAngle(_up, o.rot);
@@ -144,8 +229,8 @@ export class ObjectsView {
     if (ghost) {
       ghost.color.matrix.copy(_m);
       ghost.depth.matrix.copy(_m);
-      mesh.setMatrixAt(o.inst, ZERO);
-    } else mesh.setMatrixAt(o.inst, _m);
+    }
+    if (o.inst >= 0) mesh.setMatrixAt(o.inst, ghost ? ZERO : _m);
   }
 
   // ------------------------------------------------------------ see-through occluders
@@ -269,7 +354,12 @@ export class ObjectsView {
       if (!o.dirty) continue;
       o.dirty = false;
       const mesh = this.meshes.get(meshKey(o))!;
-      this.writeMatrix(mesh, o, time);
+      if (o.inst < 0) {
+        // Not drawn: it may have walked, spawned or been pulled into view since the last cull.
+        if (drawable(o) && this.inView(o)) this.addSlot(o, time);
+        else if (this.ghosts.has(o)) this.writeMatrix(mesh, o, time);
+        else continue;
+      } else this.writeMatrix(mesh, o, time);
       // Only bumps a version number: each mesh still uploads once per render.
       mesh.instanceMatrix.needsUpdate = true;
     }
@@ -282,6 +372,7 @@ export class ObjectsView {
       m.dispose();
     }
     this.meshes.clear();
+    this.slots.clear();
     this.world = null;
   }
 }
