@@ -180,11 +180,11 @@ is selected). Later maps also need Singularities.
 
 Goals, size offsets, XP and value multipliers were tuned with the simulators in `balance/`
 (CMA-ES over simulated playthroughs; `balance/tuned/finalist.json`, results in
-`balance/notes/`). Goals sit below each map's XP ceiling: Harbor and Moon Base used to need the
+`balance/NOTES.md`). Goals sit below each map's XP ceiling: Harbor and Moon Base used to need the
 last props of a full clear, which stalled most players a size short. Value multipliers rise map
 by map, since prices follow them. The Spaceport, added later, sits between Airport and Moon Base
-and unlocks with 2 Singularities (`balance/notes/spaceport.md`). Spaceport and Moon Base take 5
-more sizes off than they used to, balanced by Starting Size levels 46–50 (`balance/notes/phase7.md`):
+and unlocks with 2 Singularities. Spaceport and Moon Base take 5
+more sizes off than they used to, balanced by Starting Size levels 46–50 (`balance/NOTES.md`):
 a hole that maxed the old 45 levels no longer starts close to their goals. Every map tracks
 its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
 

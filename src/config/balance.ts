@@ -267,7 +267,7 @@ export const MAP_SIZE_MIN_SPAN = 0.15;
  * up to `singularityDmCap`, also raises Dark Matter gains by `singularityDmBonus`: the first
  * Singularity (and so the second run) pays as before, later ones pay x2 for the same lifetime
  * cash. A higher cap keeps raising gains after the first ones, so later runs shrink fast
- * (balance/notes/phase7.md).
+ * (balance/NOTES.md).
  */
 export const PRESTIGE = {
   coef: 1.75,

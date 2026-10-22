@@ -3,7 +3,7 @@
 Simulated players for Snack Hole's pacing, built on the real game code (`src/core/`). Re-run them
 after any change to `src/config/balance.ts`, `src/config/objects.ts` or a map generator.
 `ECONOMY.md` lists every formula; `report.ts` writes dated reports to `reports/` (gitignored, like
-`data/`; `notes/` keeps the numbers that matter); `tuned/finalist.json` is the tuned set now
+`data/`; `NOTES.md` keeps the numbers that matter); `tuned/finalist.json` is the tuned set now
 written into the game (with the values it replaced).
 
 ## After a content or balance change
@@ -76,7 +76,8 @@ records the git commit it was made from; seeds are fixed by the flags above.
 - **Tuning** (`lib/params.ts`, `lib/loss.ts`, `lib/cmaes.ts`, `tune.ts`): the whitelist with
   bounds, applied at runtime by mutating `src/config/balance.ts` objects (no source edits); the
   loss is weighted target misses (average and weak count 1.5x) plus a penalty on change size.
-  `notes/` holds the hand-written summaries the reports include.
+  `report.ts --notes <file>` puts a hand-written summary at the top of a report; `NOTES.md`
+  collects what each pass changed, dropped and left open.
 - **Calibration**: play with the dev server at `http://localhost:5101/?log` (plus `&fresh` or
   `&save=calib-farm` / `&save=calib-harbor`); each round is appended to
   `balance/calibration/rounds.jsonl`. `calibrate.ts` compares the bots with those rounds.

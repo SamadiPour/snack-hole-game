@@ -3,11 +3,11 @@
 Phase 1 of the balance audit, written from the code at commit `b4230e4`. Every formula is quoted as
 implemented, with `file:line`. The formulas still hold; 22 values changed in Phase 4 (goals, map
 offsets and multipliers, cost growths, Cash Value, Golden Touch, helper share, Mega Mouth, Dark
-Matter coefficient): see `tuned/finalist.json` and `notes/phase4.md`. Two formulas changed after
+Matter coefficient): see `tuned/finalist.json` and `NOTES.md`. Two formulas changed after
 that: Mega Mouth's radius is `x(1.35 + 0.1 (level - 1))` instead of x1.45, and the magnet's range
 and pull use the hole's base radius instead of the Mega-enlarged one. Every cash price is now
 multiplied by the newest unlocked map's value multiplier (`priceScale`), with config prices in
-Suburb money (`notes/phase5.md`). Phase 7 (`notes/phase7.md`) doubles Dark Matter gains from
+Suburb money (`NOTES.md`, Phase 5). Phase 7 doubles Dark Matter gains from
 the second Singularity on (the collapse hint follows the formula before that multiplier),
 makes Quantum Helpers +50% per level (2 levels) and Hawking Radiation one +4 h level, and caps
 Event Horizon and Dense Core at 10; the DM tree table in §8 is from before. `static/stats.md` is regenerated for the current values. Config values are the source of truth; DESIGN.md is a summary of them.

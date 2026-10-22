@@ -33,7 +33,7 @@ const da = read<PlayFile>(`balance/data/layerB-direct${sfx(TAG)}.json`);
 const eb = read<{ rows: ExpRow[] }>(`balance/data/experiments${sfx(BEFORE_TAG)}.json`).rows;
 const ea = read<{ rows: ExpRow[] }>(`balance/data/experiments${sfx(TAG)}.json`).rows;
 // Tuned values from the after side's params; when they are written into the game (no params) the
-// table of written values lives in the Phase 4 notes instead.
+// values are in src/config/balance.ts, and balance/NOTES.md says what changed.
 const params = da.params ?? null;
 const beforeValues = baselineValues();
 
@@ -52,7 +52,7 @@ if (params) {
     md.push(`| ${p.label.replace(' (size, 0-based)', '')} | ${show(a)} | ${show(b)} | ${p.int || p.id.endsWith('.goal') ? `${b - a > 0 ? '+' : ''}${b - a}` : `${b / a - 1 >= 0 ? '+' : ''}${((b / a - 1) * 100).toFixed(0)}%`} |`);
   }
   md.push('');
-} else md.push('The tuned values are written into `src/config/balance.ts`; the table of written values is in the Phase 4 notes.', '');
+} else md.push('The tuned values are written into `src/config/balance.ts`; `balance/NOTES.md` says what changed.', '');
 
 // Checks.
 md.push('## Targets', '', '| Check | Target | Before | After | |', '|---|---|---|---|---|');
