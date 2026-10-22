@@ -25,6 +25,8 @@ import { toast } from './ui/toast';
 
 /** Consecutive failing frames before the game stops and shows an error screen. */
 const MAX_FAILED_FRAMES = 30;
+/** Frame rate the game draws at on faster screens, unless graphics quality is High. */
+const TARGET_FPS = 60;
 
 export class Game implements HubApi {
   save: SaveData;
@@ -42,6 +44,9 @@ export class Game implements HubApi {
   warp = 1;
   private saveTimer = 0;
   private last = performance.now();
+  /** Previous animation callback, and the smoothed time between callbacks (the screen's refresh, ms). */
+  private lastCallback = 0;
+  private refreshMs = 1000 / 60;
   private hubRestart = 0;
   private hiddenAt = 0;
   /** Open pause menu during a round; the simulation is frozen while set. */
@@ -305,6 +310,7 @@ export class Game implements HubApi {
   private frame(now: number): void {
     if (this.crashed) return;
     requestAnimationFrame((t) => this.frame(t));
+    if (this.skipFrame(now)) return;
     try {
       this.tick(now);
       this.failedFrames = 0;
@@ -312,6 +318,21 @@ export class Game implements HubApi {
       console.error(err);
       if (++this.failedFrames >= MAX_FAILED_FRAMES) this.crash(err);
     }
+  }
+
+  /**
+   * On screens faster than TARGET_FPS (120 Hz laptops and phones, 144 Hz monitors) only every Nth
+   * refresh is drawn, so the game runs near 60 fps instead of 120+: half the GPU work and heat,
+   * and room for what else the GPU draws (at 120 fps full screen it lagged under the system's
+   * volume overlay). High quality draws every refresh.
+   */
+  private skipFrame(now: number): boolean {
+    const d = now - this.lastCallback;
+    this.lastCallback = now;
+    if (d > 0 && d < 50) this.refreshMs += (d - this.refreshMs) * 0.05;
+    if (this.save.settings.quality === 'high') return false;
+    const every = Math.max(1, Math.floor((1000 / TARGET_FPS + 0.5) / this.refreshMs));
+    return now - this.last < (every - 0.5) * this.refreshMs;
   }
 
   private crash(err: unknown): void {

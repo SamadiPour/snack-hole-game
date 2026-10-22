@@ -341,7 +341,8 @@ src/
                music.ts: one CC0 track per map from public/music/ (CREDITS.md), looped
                gaplessly, cross-faded on map change, quieter in the hub, ducked while paused
   dev/         dev-only URL testing flags (?mute, ?fresh, ?save=NAME, ?seed=N) and fixture saves
-  game.ts      state machine (hub → round → results), autosave, offline, purchases, crash guard
+  game.ts      state machine (hub → round → results), autosave, offline, purchases, crash guard,
+               frame cap (below High quality, 120 Hz+ screens draw every other refresh)
   persistence.ts  SaveStore: localStorage (memory for dev test saves), backup, damaged-save copy,
                one saving tab, warning when the browser refuses a write
   round-fx.ts  RoundFeedback: world events → sounds, particles, banners, floaters, shake,
