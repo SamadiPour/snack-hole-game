@@ -283,7 +283,7 @@ export class World {
     this.grid = new SpatialGrid<WObj>(map.size, 8);
     this.block = blockMapFor(map);
     this.timeLeft = opts.demo ? Infinity : cfg.roundTime;
-    // Big abilities start part-charged so they land mid-round instead of being spent at second 0.
+    // Each ability starts the round `startCharge` charged: Dash ready, Vortex and Mega Mouth empty.
     for (const a of ABILITIES) this.abilities[a.id].cd = cfg.abilities[a.id].cooldown * (1 - a.startCharge);
 
     for (const s of map.spawns) {
@@ -774,6 +774,9 @@ export class World {
     }
     const wobR = H.main ? Math.min(this.maxF, 2.5 * R + 6) * 0.8 : 0;
     const qr = R + Math.max(magR, wobR);
+    // The magnet (and Vortex) reach `magR` past the hole's own rim: Mega Mouth widens what they pull
+    // in, not how far they pull from.
+    const mr = H.baseR + magR;
     const visit = (o: WObj) => {
       if (o.state !== ALIVE) return;
       const dx = o.x - H.x;
@@ -786,7 +789,6 @@ export class World {
           return;
         }
         if (magR > 0) {
-          const mr = R + magR;
           if (d2 < mr * mr) {
             const d = Math.sqrt(d2);
             const step = Math.min(pull * dt * (1.5 - d / mr), d - inner * 0.5);

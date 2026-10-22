@@ -148,16 +148,17 @@ levels a round gains, so they are priced like size upgrades.
 |---|---|---|---|---|---|---|
 | Dash | Space / 1 | x2.8 speed for 0.6 s | 7 s | $300K | $2.67M | x3.25 each |
 | Vortex | 2 | magnet +300% range, x3 pull, 4 s | 22 s | $2.22M | $7.41M | x3.34 each |
-| Mega Mouth | 3 | radius x1.35 (+0.1 per level), 5 s | 30 s | $36.9M | $85.6M | x2.32 each |
+| Mega Mouth | 3 | radius x1.35 (+0.1 per level), 4 s | 30 s | $36.9M | $85.6M | x2.32 each |
 
 Fixed prices, set where the simulated average player buys each one (Vortex on Downtown, Mega
 Mouth on Harbor); Dash unlocks cheaper, partway through Farm, with its levels left where they
 were. Level cost `levelCost * growth^(lvl - 2)`; each level −12% cooldown, +20% duration (Mega
 Mouth also +10% radius).
 The magnet's range and pull follow the hole's own radius, so Mega Mouth widens the mouth but
-not the magnet's reach past the rim.
-Rounds start with Dash ready and Vortex / Mega Mouth half charged (`startCharge`), so the big
-ones land mid-round instead of being spent at second 0 on a tiny hole.
+not the magnet's reach (Vortex included): it pulls whatever the mouth can swallow, from the
+hole's own rim.
+Rounds start with Dash ready and Vortex / Mega Mouth empty (`startCharge` 0), so their first use
+comes a full cooldown into the round.
 
 Esc (or the ⏸ button) pauses a round: the simulation freezes, with Resume / Settings / End round
 (keeps the cash eaten so far). Hiding the tab also pauses.
@@ -269,38 +270,38 @@ after its last goal.
 
 | Seeds 1–10, median (range) | `--human` | `--good` |
 |---|---|---|
-| first Singularity | 46:51 (37:44–55:22) | 34:18 (28:47–41:15) |
-| Moon Base (run 4) | 1h 55m (1h 47m–2h 06m) | 1h 25m (1h 20m–1h 38m) |
-| run 2 rounds to the Harbor goal | 4 (1–6) | 3 (2–4) |
-| seconds per level after the first | 5.05–5.75 | 4.13–4.50 |
-| targets met | 10–13 of 22 | 10–13 of 22 |
+| first Singularity | 53:14 (37:22–1h 01m) | 34:16 (26:55–37:35) |
+| Moon Base (run 4) | 2h 12m (1h 52m–2h 29m) | 1h 27m (1h 18m–1h 32m) |
+| run 2 rounds to the Harbor goal | 4 (2–9) | 3 (2–4) |
+| seconds per level after the first | 5.53–5.93 | 4.40–4.70 |
+| targets met | 9–13 of 22 | 10–12 of 22 |
 
 Rounds to reach each map's goal, seed 1, `--human` (- = not reached that run):
 
 | Run | Suburb | Farm | Downtown | Harbor | Airport | Spaceport | Moon Base | Run length |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 4 | 8 | 10 | 4 | | | | 44:52 (26 rounds) |
-| 2 | 3 | 2 | 4 | 4 | 3 | | | 29:25 (16) |
-| 3 | 2 | 2 | 1 | 2 | 2 | 4 | | 23:53 (13) |
-| 4 | 2 | 1 | 1 | 1 | 2 | 1 | 1 | 17:38 (11) |
-| 5 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 10:01 (8) |
-| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 7:47 (8) |
+| 1 | 4 | 8 | 11 | 7 | | | | 52:59 (30 rounds) |
+| 2 | 3 | 4 | 3 | 3 | 4 | | | 30:14 (17) |
+| 3 | 2 | 1 | 2 | 2 | 3 | 3 | | 24:19 (13) |
+| 4 | 2 | 1 | 1 | 2 | 2 | 2 | 1 | 20:53 (13) |
+| 5 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 10:53 (9) |
+| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 8:13 (8) |
 
-Dark Matter per run, seed 1, `--human`: 5, 10, 12, 16, 30, 55 (before x2 from the second
+Dark Matter per run, seed 1, `--human`: 6, 10, 12, 18, 30, 57 (before x2 from the second
 Singularity: 5, 5, 6, 8, 13, 20).
 
 Upgrade prices follow the newest map's value multiplier, so the shop rarely runs dry: shop visits
-buy 4–8 items (target 1–3 for `--human`; fixed helper and ability prices get cheap on later maps)
-and about 1% of visits find it sold out. Goals sit below each map's XP ceiling: from Harbor on, a
-goal is reached with 70–82% of the map eaten, Moon Base 68–90%. Misses: the cheapest option left
-costs 0.18–0.26 rounds of income (target 1–3), first visits take up to 12 rounds on Downtown and
-10 on Harbor (target 2–8; prices jump with each new map before Starting Size catches up) but 1–8
-on the Spaceport (`--good`: 1–2) and 1 on Moon Base, later runs still reach most goals in 1–2
-rounds (target 2–4), runs grind 2–6 rounds after their last goal while the formula climbs to the
-hint, runs after the first tier-up earn more than twice the Dark Matter of the run before (4 of
-10 `--human` seeds, all `--good` ones) and take 8–12 minutes, the median `--human` round grows
-the radius x3.25–3.65 (target x4; short late runs start close to each map's size cap), and the
-skill band. The players in `balance/` are slower (their average bot reaches the Moon Base goal in about
+buy 3.5–8 items (target 1–3 for `--human`; fixed helper and ability prices get cheap on later
+maps) and about 1% of visits find it sold out. Goals sit below each map's XP ceiling: from Harbor
+on, a goal is reached with 65–83% of the map eaten, Moon Base 74–90%. Misses: the cheapest option
+left costs 0.16–0.30 rounds of income (target 1–3), first visits take up to 12 rounds on Downtown
+and 10 on Harbor (target 2–8; prices jump with each new map before Starting Size catches up) but
+1–8 on the Spaceport (`--good`: 1–2) and 1 on Moon Base, later runs still reach most goals in
+1–2 rounds (target 2–4), runs grind 1–6 rounds after their last goal while the formula climbs to
+the hint, runs after the first tier-up earn more than twice the Dark Matter of the run before (3
+of 10 `--human` seeds, 8 of 10 `--good`) and take 8–12 minutes, the median `--human` round grows
+the radius x3.25–4.11 (target x4; short late runs start close to each map's size cap), one
+`--human` first Singularity takes 1h 01m (target 30–60 min), and the skill band. The players in `balance/` are slower (their average bot reaches the Moon Base goal in about
 2h 50m): playtesting decides which is closer.
 
 ## Architecture

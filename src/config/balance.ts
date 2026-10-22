@@ -189,8 +189,8 @@ export interface AbilityDef {
 
 export const ABILITIES: AbilityDef[] = [
   { id: 'dash', name: 'Dash', icon: '⚡', key: 'Space / 1', desc: 'Burst of speed.', unlockCost: 300000, levelCost: 2.67e6, levelGrowth: 3.25, unlockAt: 2500, duration: 0.6, cooldown: 7, startCharge: 1, maxLevel: 5 },
-  { id: 'vortex', name: 'Vortex', icon: '🌀', key: '2', desc: 'Powerful pull on everything edible nearby.', unlockCost: 2.22e6, levelCost: 7.41e6, levelGrowth: 3.34, unlockAt: 5e4, duration: 4, cooldown: 22, startCharge: 0.5, maxLevel: 5 },
-  { id: 'mega', name: 'Mega Mouth', icon: '👄', key: '3', desc: 'Temporarily grow wider: +35%, and +10% more per level.', unlockCost: 36.9e6, levelCost: 85.6e6, levelGrowth: 2.32, unlockAt: 1.5e6, duration: 5, cooldown: 30, startCharge: 0.5, maxLevel: 5 },
+  { id: 'vortex', name: 'Vortex', icon: '🌀', key: '2', desc: 'Powerful pull on everything edible nearby.', unlockCost: 2.22e6, levelCost: 7.41e6, levelGrowth: 3.34, unlockAt: 5e4, duration: 4, cooldown: 22, startCharge: 0, maxLevel: 5 },
+  { id: 'mega', name: 'Mega Mouth', icon: '👄', key: '3', desc: 'Temporarily grow wider: +35%, and +10% more per level.', unlockCost: 36.9e6, levelCost: 85.6e6, levelGrowth: 2.32, unlockAt: 1.5e6, duration: 4, cooldown: 30, startCharge: 0, maxLevel: 5 },
 ];
 
 export const ABILITY_LEVEL = {

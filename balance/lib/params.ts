@@ -7,7 +7,7 @@
  * `BASE` is the config as loaded, so the round model and Layer B can convert between baseline
  * units (what Layer A measured) and the tuned ones.
  */
-import { ABILITIES, CASH_VALUE, DM_UPGRADES, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, MAP_PRICE, PRESTIGE, SIZE, UPGRADES, VALUE, type DmUpgradeId, type MapId, type UpgradeId } from '../../src/config/balance';
+import { ABILITIES, ABILITY_LEVEL, CASH_VALUE, DM_UPGRADES, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, MAP_PRICE, PRESTIGE, SIZE, UPGRADES, VALUE, type DmUpgradeId, type MapId, type UpgradeId } from '../../src/config/balance';
 import type { RoundConfig } from '../../src/core/economy';
 import type { SaveData } from '../../src/core/save';
 
@@ -163,6 +163,13 @@ P.push({
     for (const u of DM_UPGRADES) u.base = BASE.dmBase[u.id] * k;
   },
 });
+for (const a of ABILITIES) {
+  P.push({ id: `abilities.${a.id}.startCharge`, group: 'abilities', label: `${a.name}: share charged at round start`, lo: 0, hi: 1, manual: true, dynamic: true, get: () => ABILITIES.find((x) => x.id === a.id)!.startCharge, set: (v) => (ABILITIES.find((x) => x.id === a.id)!.startCharge = v) });
+  P.push({ id: `abilities.${a.id}.cooldown`, group: 'abilities', label: `${a.name}: cooldown at level 1 (s)`, lo: 3, hi: 60, manual: true, dynamic: true, get: () => ABILITIES.find((x) => x.id === a.id)!.cooldown, set: (v) => (ABILITIES.find((x) => x.id === a.id)!.cooldown = v) });
+  P.push({ id: `abilities.${a.id}.duration`, group: 'abilities', label: `${a.name}: duration at level 1 (s)`, lo: 1, hi: 10, manual: true, dynamic: true, get: () => ABILITIES.find((x) => x.id === a.id)!.duration, set: (v) => (ABILITIES.find((x) => x.id === a.id)!.duration = v) });
+}
+P.push({ id: 'abilities.megaScalePerLevel', group: 'abilities', label: 'Mega Mouth: extra radius per level', lo: 0, hi: 0.2, manual: true, dynamic: true, get: () => ABILITY_LEVEL.megaScalePerLevel, set: (v) => (ABILITY_LEVEL.megaScalePerLevel = v) });
+P.push({ id: 'abilities.megaScale', group: 'abilities', label: 'Mega Mouth: radius at level 1', lo: 1, hi: 2, manual: true, dynamic: true, get: () => ABILITY_LEVEL.megaScale, set: (v) => (ABILITY_LEVEL.megaScale = v) });
 P.push({ id: 'upgrades.startSize.max', group: 'upgrades', label: 'Starting Size levels', lo: 40, hi: 60, int: true, manual: true, get: () => upg('startSize').max, set: (v) => (upg('startSize').max = Math.round(v)) });
 for (const d of DM_UPGRADES) {
   P.push({ id: `dm.${d.id}.base`, group: 'prestige', label: `${d.name}: first level (DM)`, lo: 1, hi: 100, log: true, manual: true, get: () => dmUpg(d.id).base, set: (v) => (dmUpg(d.id).base = v) });

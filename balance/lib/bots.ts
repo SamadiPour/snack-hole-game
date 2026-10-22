@@ -315,7 +315,8 @@ export class Pilot {
       } else if (a.id === 'mega') {
         if (this.wantMega && t && dist < 2 * h.r + holeSpeed(h.baseR, w.cfg.speedMult) * 1.5) w.useAbility('mega');
       } else if (a.id === 'vortex') {
-        const range = h.r * (1 + magnetRangeFrac(w.cfg.magnetLevel) + ABILITY_LEVEL.vortexRange);
+        // What Vortex would pull: props that fit the mouth, within its reach of the hole's own rim.
+        const range = h.baseR * (1 + magnetRangeFrac(w.cfg.magnetLevel) + ABILITY_LEVEL.vortexRange);
         const fit = SIZE.fit * h.r;
         let n = 0;
         w.grid.query(h.x, h.z, range, (o) => {

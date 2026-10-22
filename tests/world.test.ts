@@ -27,9 +27,9 @@ function cfg(startSize = 0, mapCleared = false) {
 
 describe('magnet', () => {
   // A cone `dist` m from a size-13 hole (R 3.08 m) with Magnet 8 (reach 1.11 R = 3.42 m past the rim).
-  function magnetWorld(dist: number, mega: boolean) {
+  function magnetWorld(dist: number, mega: boolean, type = 'cone') {
     const b = new MapBuilder('suburb', 100, 1);
-    b.put('cone', dist, 0, 0, { force: true });
+    b.put(type, dist, 0, 0, { force: true });
     const map = b.build('#000', '#000', { sky: '#fff', fog: '#fff', sun: '#fff', hemiSky: '#fff', hemiGround: '#000', sunIntensity: 1 });
     const s = defaultSave(0);
     s.stats.rounds = 1;
@@ -51,9 +51,16 @@ describe('magnet', () => {
   });
 
   it('keeps its reach when Mega Mouth widens the mouth', () => {
-    // Mega moves the rim to 4.16 m; the band past it stays 3.42 m (it used to grow to 4.62 m, to 8.78 m).
-    expect(magnetWorld(8, true)).toBe(8);
-    expect(magnetWorld(7.4, true)).toBeLessThan(7.4);
+    // Mega moves the mouth's rim to 4.16 m; the magnet still reaches 3.42 m past the hole's own rim.
+    expect(magnetWorld(6, true)).toBeLessThan(6);
+    expect(magnetWorld(7, true)).toBe(7);
+  });
+
+  it('pulls props only Mega Mouth can swallow, from the same reach', () => {
+    // A truck (3.58 m) fits the Mega mouth (3.75 m) but not the hole's own (2.77 m).
+    expect(magnetWorld(6, false, 'truck')).toBe(6);
+    expect(magnetWorld(6, true, 'truck')).toBeLessThan(6);
+    expect(magnetWorld(7, true, 'truck')).toBe(7);
   });
 });
 
@@ -118,15 +125,15 @@ describe('swallowing', () => {
     expect(w.comboBest).toBe(5);
   });
 
-  it('starts Dash ready and the big abilities half-charged', () => {
+  it('starts Dash ready and the big abilities empty', () => {
     const s = defaultSave(0);
     s.stats.rounds = 1;
     s.abilities = { dash: 1, vortex: 1, mega: 1 };
     const w = new World(tinyMap(), buildRoundConfig(s));
     expect(w.abilityReady('dash')).toBe(true);
     expect(w.abilityReady('vortex')).toBe(false);
-    expect(w.abilities.vortex.cd).toBeCloseTo(w.cfg.abilities.vortex.cooldown / 2);
-    expect(w.abilities.mega.cd).toBeCloseTo(w.cfg.abilities.mega.cooldown / 2);
+    expect(w.abilities.vortex.cd).toBeCloseTo(w.cfg.abilities.vortex.cooldown);
+    expect(w.abilities.mega.cd).toBeCloseTo(w.cfg.abilities.mega.cooldown);
   });
 
   it('golden props are worth GOLDEN.valueMul times more', () => {
