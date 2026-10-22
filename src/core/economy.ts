@@ -7,6 +7,7 @@ import {
   DM_UPGRADES,
   GOLDEN,
   GROWTH_PER_LEVEL,
+  HAWKING_HOURS,
   HEAD_START_BASE,
   HELPERS,
   MAGNET,
@@ -261,7 +262,7 @@ export function helperLevelCost(level: number, scale = 1): number {
 
 export function offlineCapSeconds(save: SaveData): number {
   const hours =
-    OFFLINE.baseCapHours + OFFLINE.capPerLevel * save.upgrades.offline + 2 * dmLevel(save, 'hawking');
+    OFFLINE.baseCapHours + OFFLINE.capPerLevel * save.upgrades.offline + HAWKING_HOURS * dmLevel(save, 'hawking');
   return hours * 3600;
 }
 
@@ -306,17 +307,41 @@ export function tierDmMult(tier: number): number {
   return 1 + PRESTIGE.tierDmBonus * tier;
 }
 
+/** Dark Matter multiplier from the Singularities already done (x1 before the first). */
+export function singularityDmMult(prestiges: number): number {
+  return 1 + PRESTIGE.singularityDmBonus * Math.min(prestiges, PRESTIGE.singularityDmCap);
+}
+
+/** Both Dark Matter multipliers on a Singularity's gain: tier and Singularities done. */
+export function dmGainMult(save: SaveData): number {
+  return tierDmMult(save.tier) * singularityDmMult(save.stats.prestiges);
+}
+
 /** A Singularity needs the prestige map unlocked this run. */
 export function prestigeUnlocked(save: SaveData): boolean {
   return save.maps[PRESTIGE.unlockMap];
 }
 
+/** Dark Matter a Singularity pays once the formula reaches `formulaDm` (0 while it is locked). */
+export function dmGainAt(save: SaveData, formulaDm: number): number {
+  if (!prestigeUnlocked(save)) return 0;
+  const base = formulaDm - save.dmClaimed;
+  // The epsilon keeps float error (45 * 1.4 = 62.999…) from costing a whole Dark Matter.
+  return base > 0 ? Math.floor(base * dmGainMult(save) + 1e-9) : 0;
+}
+
 /** Dark Matter a Singularity would pay right now (0 while it is locked). */
 export function dmGain(save: SaveData): number {
-  if (!prestigeUnlocked(save)) return 0;
-  const base = dmForLifetime(save.lifetimeCash) - save.dmClaimed;
-  // The epsilon keeps float error (45 * 1.4 = 62.999…) from costing a whole Dark Matter.
-  return base > 0 ? Math.floor(base * tierDmMult(save.tier) + 1e-9) : 0;
+  return dmGainAt(save, dmForLifetime(save.lifetimeCash));
+}
+
+/**
+ * How much a Singularity now would grow the Dark Matter formula's total, as a share of what is
+ * already claimed (Infinity before the first). The multipliers are left out, so the panel's
+ * PRESTIGE.goodGain hint comes at the same lifetime cash however much they pay.
+ */
+export function dmGrowth(save: SaveData): number {
+  return save.dmClaimed > 0 ? (dmForLifetime(save.lifetimeCash) - save.dmClaimed) / save.dmClaimed : Infinity;
 }
 
 /** Whether this run reached the Moon Base goal, which raises the tier on the next Singularity. */

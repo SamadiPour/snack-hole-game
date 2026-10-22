@@ -31,14 +31,14 @@ Min start = lowest start size whose "eat everything" ceiling reaches the goal; i
 | downtown | 250 | 1369 (231) | 26 | 31 | 16 | 50 | 0.63 | 1,041,750 | 4,936 | 16 (31) | 1 (16) | 1 (16) |
 | harbor | 280 | 1272 (163) | 24 | 30 | 24 | 233 | 0.49 | 3,121,035 | 3,548 | 21 (44) | 15 (38) | 20 (43) |
 | airport | 320 | 1315 (168) | 28 | 35 | 26 | 870 | 0.94 | 10,734,060 | 4,219 | 26 (51) | 24 (49) | 24 (49) |
-| spaceport | 300 | 1135 (149) | 29 | 36 | 31 | 970 | 0.87 | 15,172,740 | 4,909 | 27 (57) | 26 (56) | 26 (56) |
-| moon | 300 | 1574 (79) | 25 | 30 | 32 | 1080 | 0.81 | 14,424,480 | 2,715 | 22 (53) | 16 (47) | 19 (50) |
+| spaceport | 300 | 1135 (149) | 29 | 36 | 36 | 970 | 0.87 | 15,181,470 | 4,909 | 27 (62) | 26 (61) | 26 (61) |
+| moon | 300 | 1574 (79) | 25 | 30 | 37 | 1080 | 0.81 | 14,424,480 | 2,715 | 22 (58) | 16 (52) | 19 (55) |
 
 ## Upgrade costs (tier 0)
 
 | Upgrade | L1 | L2 | L3 | L4 | L5 | L6 | L8 | L10 | max (cost of last) | total |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Starting Size | 55 | 69 | 86 | 107 | 134 | 168 | 262 | 410 | 45 (1M) | 5.1M |
+| Starting Size | 55 | 69 | 86 | 107 | 134 | 168 | 262 | 410 | 50 (3.1M) | 15.4M |
 | Speed | 75 | 244 | 792 | 2.6K | 8.4K | 27.2K | 287.2K | - | 8 (287.2K) | 414.9K |
 | Cash Value | 125 | 350 | 980 | 2.7K | 7.7K | 21.5K | 168.7K | 1.3M | 10 (1.3M) | 2.1M |
 | Round Time | 500 | 1.4K | 3.9K | 11K | - | - | - | - | 4 (11K) | 16.8K |
@@ -47,11 +47,11 @@ Min start = lowest start size whose "eat everything" ceiling reaches the goal; i
 | Combo Window | 620 | 1.6K | 3.9K | 9.7K | 24.2K | 60.5K | 378.4K | - | 8 (378.4K) | 630.3K |
 | Golden Touch | 6.2K | 14.6K | 34.2K | 80.5K | 189.1K | 444.4K | 2.5M | - | 8 (2.5M) | 4.3M |
 | Offline Vault | 3.7K | 11.1K | 33.3K | 99.9K | - | - | - | - | 4 (99.9K) | 148K |
-| Dash (unlock, L2..L5) | 20K | 33K | 54.4K | 89.8K | 148.2K | - | - | - | 5 | 345.5K |
-| Vortex (unlock, L2..L5) | 54K | 89.1K | 147K | 242.6K | 400.2K | - | - | - | 5 | 932.9K |
-| Mega Mouth (unlock, L2..L5) | 208K | 343.2K | 566.3K | 934.4K | 1.5M | - | - | - | 5 | 3.6M |
-| Helper count | 4.4K | 15K | 37K | 285K | - | - | - | - | 4 | 341.4K |
-| Helper level | 5K | 8.6K | 14.6K | 25K | 42.8K | 73.1K | 213.8K | 625.1K | 10 | 1.5M |
+| Dash (unlock, L2..L5) | 300K | 2.7M | 8.7M | 28.2M | 91.7M | - | - | - | 5 | 131.5M |
+| Vortex (unlock, L2..L5) | 2.2M | 7.4M | 24.7M | 82.7M | 276.1M | - | - | - | 5 | 393.1M |
+| Mega Mouth (unlock, L2..L5) | 36.9M | 85.6M | 198.6M | 460.7M | 1,068.9M | - | - | - | 5 | 1,850.7M |
+| Helper count | 38K | 617K | 6.6M | 177M | - | - | - | - | 4 | 184.2M |
+| Helper level | 132K | 331.3K | 831.6K | 2.1M | 5.2M | 13.2M | 82.8M | 522M | 10 | 867.5M |
 
 ## suburb
 
@@ -225,15 +225,15 @@ Start size -> highest size reachable by eating everything edible (growth 0 / gro
 
 | Size | Radius | Props | Movers | $ total | $ / prop | XP total | Props / 1000 m² | Nearest to start m | Main types |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | 0.75 | 531 | 96 | 858,450 | 1,616.7 | 80.9 | 5.9 | 4 | Hard Hat 128, Traffic Cone 90, Bush 89 |
-| 2 | 0.84 | 109 | 0 | 422,920 | 3,880 | 56.2 | 1.21 | 21 | Crate 75, Bush 25, Rock 9 |
-| 3 | 0.95 | 72 | 0 | 380,240 | 5,281.1 | 47.7 | 0.8 | 6 | Bush 38, Satellite 17, Bench 17 |
-| 4 | 1.07 | 33 | 0 | 185,270 | 5,614.2 | 26.7 | 0.37 | 26 | Bush 29, Satellite 4 |
-| 5 | 1.2 | 44 | 0 | 297,790 | 6,768 | 46.6 | 0.49 | 10 | Bush 37, Palm Tree 6, Satellite 1 |
-| 6 | 1.35 | 50 | 15 | 435,530 | 8,710.6 | 68.5 | 0.56 | 8 | Weather Balloon 18, Alligator 15, Palm Tree 13 |
-| 7 | 1.52 | 69 | 12 | 712,950 | 10,332.6 | 113.1 | 0.77 | 17 | Crew Buggy 28, Palm Tree 21, Street Lamp 12 |
-| 8 | 1.71 | 42 | 0 | 512,160 | 12,194.3 | 88.9 | 0.47 | 37 | Palm Tree 32, Bus Shelter 6, Forklift 4 |
-| 9 | 1.92 | 32 | 0 | 515,070 | 16,095.9 | 86.1 | 0.36 | 12 | Palm Tree 21, Rocket Engine 8, Forklift 3 |
+| 1 | 0.75 | 529 | 96 | 861,360 | 1,628.3 | 80.5 | 5.88 | 4 | Hard Hat 128, Bush 91, Traffic Cone 90 |
+| 2 | 0.84 | 124 | 0 | 481,120 | 3,880 | 64.5 | 1.38 | 18 | Crate 75, Bush 38, Rock 11 |
+| 3 | 0.95 | 62 | 0 | 333,680 | 5,381.9 | 40.7 | 0.69 | 6 | Bush 28, Satellite 17, Bench 17 |
+| 4 | 1.07 | 34 | 0 | 194,970 | 5,734.4 | 27.8 | 0.38 | 22 | Bush 30, Satellite 4 |
+| 5 | 1.2 | 41 | 0 | 276,450 | 6,742.7 | 43.1 | 0.46 | 11 | Bush 33, Palm Tree 7, Satellite 1 |
+| 6 | 1.35 | 50 | 15 | 435,530 | 8,710.6 | 68.2 | 0.56 | 8 | Weather Balloon 18, Alligator 15, Palm Tree 13 |
+| 7 | 1.52 | 60 | 12 | 619,830 | 10,330.5 | 98.1 | 0.67 | 17 | Crew Buggy 28, Street Lamp 12, Palm Tree 12 |
+| 8 | 1.71 | 51 | 0 | 626,620 | 12,286.7 | 108.3 | 0.57 | 18 | Palm Tree 41, Bus Shelter 6, Forklift 4 |
+| 9 | 1.92 | 31 | 0 | 499,550 | 16,114.5 | 83.1 | 0.34 | 17 | Palm Tree 20, Rocket Engine 8, Forklift 3 |
 | 10 | 2.16 | 14 | 0 | 285,180 | 20,370 | 49.4 | 0.16 | 40 | Rocket Engine 7, Radar Dish 6, Space Capsule 1 |
 | 11 | 2.44 | 53 | 8 | 886,580 | 16,727.9 | 208.1 | 0.59 | 17 | Car 44, Rocket Engine 5, Space Capsule 4 |
 | 12 | 2.74 | 15 | 5 | 289,060 | 19,270.7 | 76.4 | 0.17 | 24 | Van 8, Rowboat 5, Stair Truck 1 |
@@ -246,7 +246,7 @@ Start size -> highest size reachable by eating everything edible (growth 0 / gro
 | 19 | 6.25 | 3 | 0 | 214,370 | 71,456.7 | 85.9 | 0.03 | 32 | Fuel Sphere 2, Rocket Stage 1 |
 | 20 | 7.03 | 2 | 0 | 141,620 | 70,810 | 67.7 | 0.02 | 106 | Corner Shop 1, Rocket Stage 1 |
 | 21 | 7.91 | 2 | 0 | 173,630 | 86,815 | 96.6 | 0.02 | 135 | Rocket Stage 2 |
-| 22 | 8.9 | 3 | 0 | 700,340 | 233,446.7 | 158.6 | 0.03 | 72 | Launch Tower 2, Rocket Stage 1 |
+| 22 | 8.9 | 3 | 0 | 700,340 | 233,446.7 | 158.6 | 0.03 | 77 | Launch Tower 2, Rocket Stage 1 |
 | 23 | 10.01 | 2 | 0 | 230,860 | 115,430 | 142.3 | 0.02 | 52 | Rocket Stage 2 |
 | 24 | 11.26 | 2 | 0 | 406,430 | 203,215 | 179.4 | 0.02 | 173 | Radio Telescope 2 |
 | 25 | 12.67 | 1 | 0 | 257,050 | 257,050 | 117 | 0.01 | 195 | Radio Telescope 1 |

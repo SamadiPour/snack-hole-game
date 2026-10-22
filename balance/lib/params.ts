@@ -7,7 +7,7 @@
  * `BASE` is the config as loaded, so the round model and Layer B can convert between baseline
  * units (what Layer A measured) and the tuned ones.
  */
-import { ABILITIES, CASH_VALUE, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, MAP_PRICE, PRESTIGE, SIZE, UPGRADES, VALUE, type MapId, type UpgradeId } from '../../src/config/balance';
+import { ABILITIES, CASH_VALUE, DM_UPGRADES, GOLDEN, GROWTH_PER_LEVEL, HELPERS, MAPS, MAP_PRICE, PRESTIGE, SIZE, UPGRADES, VALUE, type DmUpgradeId, type MapId, type UpgradeId } from '../../src/config/balance';
 import type { RoundConfig } from '../../src/core/economy';
 import type { SaveData } from '../../src/core/save';
 
@@ -30,6 +30,9 @@ export interface Param {
 
 const map = (id: MapId) => MAPS.find((m) => m.id === id)!;
 const upg = (id: UpgradeId) => UPGRADES.find((u) => u.id === id)!;
+const dmUpg = (id: DmUpgradeId) => DM_UPGRADES.find((u) => u.id === id)!;
+/** Late maps, where a maxed Starting Size used to start the hole close to the goal. */
+const LATE: MapId[] = ['spaceport', 'moon'];
 /** Capped tracks whose cost growth `upgrades.growthScale` scales together. */
 const CAPPED: UpgradeId[] = ['speed', 'cashValue', 'roundTime', 'growth', 'magnet', 'combo', 'golden'];
 
@@ -45,7 +48,13 @@ export const BASE = {
   helperLevelBase: HELPERS.levelBase,
   helperShare: HELPERS.roundCashShare,
   growthPerLevel: GROWTH_PER_LEVEL,
+  dmBase: Object.fromEntries(DM_UPGRADES.map((u) => [u.id, u.base])) as Record<DmUpgradeId, number>,
+  dmGrowth: Object.fromEntries(DM_UPGRADES.map((u) => [u.id, u.growth])) as Record<DmUpgradeId, number>,
+  dmCoef: PRESTIGE.coef,
+  bonusPerDm: PRESTIGE.bonusPerDm,
 };
+/** Multi-level DM tree tracks whose price growth `dm.growthScale` scales together. */
+const DM_TRACKS: DmUpgradeId[] = ['eventHorizon', 'denseCore', 'headStart', 'gravityWell'];
 
 /** Overrides that cannot be written into the config objects (see adjustCfg). */
 const over = { growthPerLevel: GROWTH_PER_LEVEL };
@@ -56,7 +65,7 @@ for (const m of MAPS) {
   // Never below today's value: slower growth inside a round would fix pacing by making play duller.
   P.push({ id: `map.${m.id}.xpMul`, group: 'maps', label: `${m.name} XP multiplier`, lo: BASE.xpMul[m.id], hi: BASE.xpMul[m.id] * 1.6, log: true, get: () => map(m.id).xpMul, set: (v) => (map(m.id).xpMul = v) });
   if (m.id !== 'suburb')
-    P.push({ id: `map.${m.id}.sizeOffset`, group: 'maps', label: `${m.name} size offset`, lo: m.sizeOffset - 6, hi: m.sizeOffset + 2, int: true, get: () => map(m.id).sizeOffset, set: (v) => (map(m.id).sizeOffset = Math.round(v)) });
+    P.push({ id: `map.${m.id}.sizeOffset`, group: 'maps', label: `${m.name} size offset`, lo: m.sizeOffset - 6, hi: m.sizeOffset + (LATE.includes(m.id) ? 10 : 2), int: true, get: () => map(m.id).sizeOffset, set: (v) => (map(m.id).sizeOffset = Math.round(v)) });
   if (m.id !== 'suburb')
     P.push({ id: `map.${m.id}.valueMul`, group: 'maps', label: `${m.name} value multiplier`, lo: BASE.valueMul[m.id] * 0.5, hi: BASE.valueMul[m.id] * 2, log: true, get: () => map(m.id).valueMul, set: (v) => (map(m.id).valueMul = v) });
 }
@@ -124,6 +133,41 @@ P.push({ id: 'mega.unlockCost', group: 'abilities', label: 'Mega Mouth unlock co
 P.push({ id: 'prestige.coef', group: 'prestige', label: 'Dark Matter coefficient', lo: 1.75, hi: 3.5, get: () => PRESTIGE.coef, set: (v) => (PRESTIGE.coef = v) });
 P.push({ id: 'prestige.exponent', group: 'prestige', label: 'Dark Matter exponent', lo: 0.25, hi: 0.4, get: () => PRESTIGE.exponent, set: (v) => (PRESTIGE.exponent = v) });
 P.push({ id: 'prestige.bonusPerDm', group: 'prestige', label: 'Cash bonus per Dark Matter', lo: 0.1, hi: 0.25, get: () => PRESTIGE.bonusPerDm, set: (v) => (PRESTIGE.bonusPerDm = v) });
+P.push({ id: 'prestige.singularityDmBonus', group: 'prestige', label: 'Dark Matter gain per Singularity done', lo: 0, hi: 1.5, manual: true, get: () => PRESTIGE.singularityDmBonus, set: (v) => (PRESTIGE.singularityDmBonus = v) });
+P.push({ id: 'prestige.singularityDmCap', group: 'prestige', label: 'Singularities that raise Dark Matter gains', lo: 1, hi: 6, int: true, manual: true, get: () => PRESTIGE.singularityDmCap, set: (v) => (PRESTIGE.singularityDmCap = Math.round(v)) });
+P.push({
+  id: 'dm.growthScale',
+  group: 'prestige',
+  label: 'DM tree: price growth scale of the multi-level tracks (growth = 1 + (g - 1) x k)',
+  lo: 0.3,
+  hi: 1,
+  manual: true,
+  get: () => (dmUpg('eventHorizon').growth - 1) / (BASE.dmGrowth.eventHorizon - 1),
+  set: (k) => {
+    for (const id of DM_TRACKS) dmUpg(id).growth = 1 + (BASE.dmGrowth[id] - 1) * k;
+  },
+});
+P.push({
+  // A relabel: k times the Dark Matter for the same cash, each worth 1/k of the cash bonus, and every
+  // DM price k times higher. Only rounding differs.
+  id: 'dm.scale',
+  group: 'prestige',
+  label: 'Dark Matter unit: gains x k, cash bonus per DM / k, DM prices x k',
+  lo: 1,
+  hi: 5,
+  manual: true,
+  get: () => PRESTIGE.coef / BASE.dmCoef,
+  set: (k) => {
+    PRESTIGE.coef = BASE.dmCoef * k;
+    PRESTIGE.bonusPerDm = BASE.bonusPerDm / k;
+    for (const u of DM_UPGRADES) u.base = BASE.dmBase[u.id] * k;
+  },
+});
+P.push({ id: 'upgrades.startSize.max', group: 'upgrades', label: 'Starting Size levels', lo: 40, hi: 60, int: true, manual: true, get: () => upg('startSize').max, set: (v) => (upg('startSize').max = Math.round(v)) });
+for (const d of DM_UPGRADES) {
+  P.push({ id: `dm.${d.id}.base`, group: 'prestige', label: `${d.name}: first level (DM)`, lo: 1, hi: 100, log: true, manual: true, get: () => dmUpg(d.id).base, set: (v) => (dmUpg(d.id).base = v) });
+  P.push({ id: `dm.${d.id}.growth`, group: 'prestige', label: `${d.name}: price growth per level`, lo: 1, hi: 4, manual: true, get: () => dmUpg(d.id).growth, set: (v) => (dmUpg(d.id).growth = v) });
+}
 P.push({ id: 'map.moon.needsSingularities', group: 'maps', label: 'Moon Base: Singularities needed', lo: 1, hi: 4, int: true, manual: true, get: () => map('moon').needsSingularities, set: (v) => (map('moon').needsSingularities = Math.round(v)) });
 // Layer A only: they change what happens in a round.
 P.push({ id: 'SIZE.frontierBonus', group: 'growth', label: 'Frontier XP bonus', lo: 1, hi: 4, dynamic: true, get: () => SIZE.frontierBonus, set: (v) => (SIZE.frontierBonus = v) });

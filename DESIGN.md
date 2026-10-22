@@ -123,7 +123,7 @@ levels a round gains, so they are priced like size upgrades.
 
 | Upgrade | Effect per level | Base | Growth | Max | Visible at (run $) |
 |---|---|---|---|---|---|
-| Starting Size | +1 start level | 55 | 1.25 | 45 | 0 |
+| Starting Size | +1 start level | 55 | 1.25 | 50 | 0 |
 | Speed | +8% speed | 75 | 3.25 | 8 | 0 |
 | Cash Value | +26% cash (linear) | 125 | 2.8 | 10 | 0 |
 | Round Time | +10 s (base 60 s, max 100 s) | 500 | 2.8 | 4 | 0 |
@@ -137,8 +137,8 @@ levels a round gains, so they are priced like size upgrades.
 
 - Count 1–4, one-off costs `38K, 617K, 6.56M, 177M` (visible after $800). Fixed prices, set where
   the simulated average player buys each one (Farm, Downtown, Harbor, Airport).
-- Training level: `132,000 * 2.51^lvl` (max 10). Radius `0.7 * 1.13^lvl` (cap 2.4 m), +10% radius
-  and speed per Quantum Helpers level.
+- Training level: `132,000 * 2.51^lvl` (max 10). Radius `0.7 * 1.13^lvl` (cap 2.4 m), +50% radius
+  and speed per Quantum Helpers level (2 levels).
 - Helpers only work during rounds: they chase the nearest edible prop and earn 84% of its value.
   They earn nothing between rounds or offline.
 
@@ -174,15 +174,17 @@ is selected). Later maps also need Singularities.
 | Downtown | Farm goal | 26 | 31 | 50 | 16 | 0.63 |
 | Harbor | Downtown goal | 24 | 30 | 233 | 24 | 0.49 |
 | Airport | Harbor goal + 1 Singularity | 28 | 35 | 870 | 26 | 0.94 |
-| Spaceport | Airport goal + 2 Singularities | 29 | 36 | 970 | 31 | 0.87 |
-| Moon Base | Spaceport goal + 3 Singularities | 25 | 30 | 1,080 | 32 | 0.81 |
+| Spaceport | Airport goal + 2 Singularities | 29 | 36 | 970 | 36 | 0.87 |
+| Moon Base | Spaceport goal + 3 Singularities | 25 | 30 | 1,080 | 37 | 0.81 |
 
 Goals, size offsets, XP and value multipliers were tuned with the simulators in `balance/`
 (CMA-ES over simulated playthroughs; `balance/tuned/finalist.json`, report in
 `balance/reports/`). Goals sit below each map's XP ceiling: Harbor and Moon Base used to need the
 last props of a full clear, which stalled most players a size short. Value multipliers rise map
 by map, since prices follow them. The Spaceport, added later, sits between Airport and Moon Base
-and unlocks with 2 Singularities (`balance/notes/spaceport.md`). Every map tracks
+and unlocks with 2 Singularities (`balance/notes/spaceport.md`). Spaceport and Moon Base take 5
+more sizes off than they used to, balanced by Starting Size levels 46–50 (`balance/notes/phase7.md`):
+a hole that maxed the old 45 levels no longer starts close to their goals. Every map tracks
 its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
 
 ## Singularity (prestige)
@@ -192,25 +194,27 @@ its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
   Singularity pays what has not been claimed yet. Doubling DM needs ~16x the cash, and collapsing
   again at the same point pays nothing, so runs must push further. The panel shows the gain, its
   % of all DM earned so far, a "Resets this run" / "You keep" list with the run's numbers, the
-  next map that needs a Singularity, and a hint once the gain is +50%. The confirm dialog shows a
+  next map that needs a Singularity, and a hint once the formula has grown 50% since the last
+  Singularity (`dmGrowth`, before the multipliers below, so they do not bring it sooner). The confirm dialog shows a
   now / after table (start size, map, cash, upgrades, helpers, abilities, permanent cash bonus,
   DM, tier), and its reset button must be held for 1.2 s (Enter or gamepad A: press twice).
 - Resets cash, upgrades, helpers, abilities, maps (Wormhole keeps maps), map goals and recent
   income. Keeps DM, DM tree, records, Gulpedia, trophies, 100% bonuses, skins, tier.
+- Every Singularity after the first pays x2 Dark Matter for the same lifetime cash
+  (`singularityDmMult`; with the tier bonus below). The first one, and so the whole second run,
+  plays as before; from the third run on there is more to spend on the tree.
 - Every DM ever earned gives +10% cash forever (spending does not reduce it).
-- DM tree: Event Horizon (+25% cash), Dense Core (+1 start size), Head Start
-  (start with $300 × 10^(lvl−1)), Quantum Helpers (+10% helper radius and speed), Gravity Well
-  (+1 magnet level), Hawking Radiation (+2 h offline cap), Wormhole (keep maps, 40 DM). The rest
-  of the tree costs ~16K DM, maxed around tier 12. Dense Core goes to level 20 on the same
-  `3 * 1.7^lvl` curve: levels 11–20 cost 605 to 71.7K DM (173K in all), the late-game DM sink,
-  bought out around tier 17–18.
+- DM tree: Event Horizon (+25% cash, 10 levels), Dense Core (+1 start size, 10 levels), Head
+  Start (start with $300 × 10^(lvl−1), 6 levels), Quantum Helpers (+50% helper radius and speed,
+  2 levels), Gravity Well (+1 magnet level, 6 levels), Hawking Radiation (+4 h offline cap, 10
+  DM), Wormhole (keep maps, 40 DM): about 1.4K DM in all, Dense Core's `3 * 1.7^lvl` the most
+  (865). Levels above a lowered cap give their DM back when an old save loads.
 - **Endless tiers.** A Singularity after a run that reached the Moon Base goal raises the tier:
   every map starts 1 size smaller per tier up to 10 sizes (tier 10), map payouts and all cash
   prices scale x4 per tier, and DM gains are x(1 + 0.1 × tier). Past tier 10 a tier only scales
-  the numbers, so with maxed Starting Size and Dense Core Moon Base still starts 1 size below its
+  the numbers, so with maxed Starting Size and Dense Core Moon Base starts 11 sizes below its
   goal and a tier-up always takes a round (uncapped it would start at size 1 from about tier 33).
-  Dense Core 10 leaves it 11 sizes below. Tiers 1, 3, 5 and 10 unlock skins
-  (trophies).
+  Tiers 1, 3, 5 and 10 unlock skins (trophies).
 - Skins (rim colour + swirl pattern: spiral, rings, stars, galaxy or none) cost 3–30 DM or come
   from trophies.
 
@@ -218,7 +222,7 @@ its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
 
 Coming back pays half a round of your recent income (average of the last 5 rounds) per hour
 away, from 3 minutes up to an 8 h cap (4 rounds' worth). Offline Vault adds +1 h per level and
-Hawking Radiation +2 h per level (18 h max). It needs no helpers and keeps working after a
+Hawking Radiation +4 h (16 h max). It needs no helpers and keeps working after a
 Singularity (recent income starts low again). Time with the tab hidden counts the same way.
 
 ## Gulpedia & trophies
@@ -234,11 +238,11 @@ Singularity (recent income starts low again). Time with the tab hidden counts th
 the most size XP per distance (map goals are sizes; chasing cash instead reached Moon Base 10–15%
 later), shops cheapest-first (Head Start cash before a run's first round; return-per-cost
 ordering was at most ~7% faster), skips what only pays while away (Offline Vault, Hawking
-Radiation: the sim never leaves the game) and collapses once the DM gain reaches the panel's hint
-(`PRESTIGE.goodGain`, +50% of all DM it has earned, and at least 3 DM) and progress has stalled:
-the newest map's goal is reached and the next map (or, past Moon Base, the next tier) needs a
-Singularity, or 4 rounds without a better size. Collapsing at the first stall is about the
-fastest way through: collapsing as soon as 1–2 DM are on offer, or holding out for 6–8, reaches
+Radiation: the sim never leaves the game) and collapses once the panel shows its hint
+(`PRESTIGE.goodGain`: the formula grew 50% since the last Singularity; and at least +30% cash,
+3 DM) and progress has stalled: the newest map's goal is reached and the next map (or, past Moon
+Base, the next tier) needs a Singularity, or 4 rounds without a better size. Collapsing at the
+first stall is about the fastest way through: collapsing as soon as 1–2 DM are on offer, or holding out for 6–8, reaches
 Moon Base later. A run that reaches 150 rounds without a Singularity stops the sim and fails the
 report.
 
@@ -266,10 +270,10 @@ after its last goal.
 | Seeds 1–10, median (range) | `--human` | `--good` |
 |---|---|---|
 | first Singularity | 46:51 (37:44–55:22) | 34:18 (28:47–41:15) |
-| Moon Base (run 4) | 1h 58m (1h 49m–2h 09m) | 1h 27m (1h 20m–1h 39m) |
+| Moon Base (run 4) | 1h 55m (1h 47m–2h 06m) | 1h 25m (1h 20m–1h 38m) |
 | run 2 rounds to the Harbor goal | 4 (1–6) | 3 (2–4) |
-| seconds per level after the first | 5.00–5.85 | 3.95–4.33 |
-| targets met | 10–14 of 22 | 10–13 of 22 |
+| seconds per level after the first | 5.05–5.75 | 4.13–4.50 |
+| targets met | 10–13 of 22 | 10–13 of 22 |
 
 Rounds to reach each map's goal, seed 1, `--human` (- = not reached that run):
 
@@ -277,21 +281,27 @@ Rounds to reach each map's goal, seed 1, `--human` (- = not reached that run):
 |---|---|---|---|---|---|---|---|---|
 | 1 | 4 | 8 | 10 | 4 | | | | 44:52 (26 rounds) |
 | 2 | 3 | 2 | 4 | 4 | 3 | | | 29:25 (16) |
-| 3 | 2 | 2 | 1 | 3 | 3 | 1 | | 21:47 (12) |
-| 4 | 2 | 1 | 2 | 2 | 1 | 1 | 1 | 22:45 (15) |
-| 5 | 2 | 1 | 1 | 2 | 1 | 1 | 1 | 18:16 (12) |
-| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 11:09 (8) |
+| 3 | 2 | 2 | 1 | 2 | 2 | 4 | | 23:53 (13) |
+| 4 | 2 | 1 | 1 | 1 | 2 | 1 | 1 | 17:38 (11) |
+| 5 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 10:01 (8) |
+| 6 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 7:47 (8) |
+
+Dark Matter per run, seed 1, `--human`: 5, 10, 12, 16, 30, 55 (before x2 from the second
+Singularity: 5, 5, 6, 8, 13, 20).
 
 Upgrade prices follow the newest map's value multiplier, so the shop rarely runs dry: shop visits
-buy 4–7 items (target 1–3 for `--human`; fixed helper and ability prices get cheap on later maps)
+buy 4–8 items (target 1–3 for `--human`; fixed helper and ability prices get cheap on later maps)
 and about 1% of visits find it sold out. Goals sit below each map's XP ceiling: from Harbor on, a
-goal is reached with 70–85% of the map eaten. Misses: the cheapest option left costs 0.17–0.24
-rounds of income (target 1–3), first visits take up to 12 rounds on Downtown and 10 on Harbor
-(target 2–8; prices jump with each new map before Starting Size catches up) but only 1–3 on the
-Spaceport and 1 on Moon Base, later runs still reach most goals in 1–2 rounds (target 2–4), runs
-grind 3–9 rounds after their last goal while the DM gain climbs to the +50% hint, and the skill
-band. The players in `balance/` are slower (their average bot reaches the Moon Base goal in about
-2h 45m): playtesting decides which is closer.
+goal is reached with 70–82% of the map eaten, Moon Base 68–90%. Misses: the cheapest option left
+costs 0.18–0.26 rounds of income (target 1–3), first visits take up to 12 rounds on Downtown and
+10 on Harbor (target 2–8; prices jump with each new map before Starting Size catches up) but 1–8
+on the Spaceport (`--good`: 1–2) and 1 on Moon Base, later runs still reach most goals in 1–2
+rounds (target 2–4), runs grind 2–6 rounds after their last goal while the formula climbs to the
+hint, runs after the first tier-up earn more than twice the Dark Matter of the run before (4 of
+10 `--human` seeds, all `--good` ones) and take 8–12 minutes, the median `--human` round grows
+the radius x3.25–3.65 (target x4; short late runs start close to each map's size cap), and the
+skill band. The players in `balance/` are slower (their average bot reaches the Moon Base goal in about
+2h 50m): playtesting decides which is closer.
 
 ## Architecture
 

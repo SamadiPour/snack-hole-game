@@ -11,6 +11,7 @@ import {
   computeOffline,
   dmForLifetime,
   dmGain,
+  dmGrowth,
   earn,
   geomBulkCost,
   geomCost,
@@ -23,6 +24,7 @@ import {
   priceScale,
   radiusForLevel,
   roundTimeFor,
+  singularityDmMult,
   singularityPreview,
   timeBonusFrac,
   unlockMaps,
@@ -272,12 +274,33 @@ describe('prestige', () => {
     n.maps[PRESTIGE.unlockMap] = true;
     expect(dmGain(n)).toBe(0);
     earn(n, lifetimeForDm(30) - n.lifetimeCash);
-    expect(dmGain(n)).toBe(10);
+    expect(dmGain(n)).toBe(Math.floor(10 * singularityDmMult(1) + 1e-9));
+  });
+
+  it('each Singularity done raises later Dark Matter gains, up to a cap; the first pays the formula', () => {
+    const s = unlocked();
+    earn(s, lifetimeForDm(10));
+    expect(dmGain(s)).toBe(10);
+    s.stats.prestiges = 1;
+    expect(dmGain(s)).toBe(Math.floor(10 * (1 + PRESTIGE.singularityDmBonus) + 1e-9));
+    s.stats.prestiges = PRESTIGE.singularityDmCap + 20;
+    expect(dmGain(s)).toBe(Math.floor(10 * singularityDmMult(PRESTIGE.singularityDmCap) + 1e-9));
   });
 
   it('needs ~16x the lifetime cash to double Dark Matter', () => {
     expect(lifetimeForDm(20) / lifetimeForDm(10)).toBeCloseTo(16);
     expect(dmForLifetime(lifetimeForDm(12) * 1.0001)).toBe(12);
+  });
+
+  it('times the collapse hint by the formula, so the multipliers do not bring it sooner', () => {
+    const s = unlocked();
+    expect(dmGrowth(s)).toBe(Infinity);
+    earn(s, lifetimeForDm(10));
+    const n = applyPrestige(s);
+    n.maps[PRESTIGE.unlockMap] = true;
+    earn(n, lifetimeForDm(10 * (1 + PRESTIGE.goodGain)) - n.lifetimeCash);
+    expect(dmGrowth(n)).toBeCloseTo(PRESTIGE.goodGain);
+    expect(dmGain(n)).toBe(Math.floor(10 * PRESTIGE.goodGain * singularityDmMult(1) + 1e-9));
   });
 
   it('resets the run but keeps meta progress', () => {
@@ -310,7 +333,7 @@ describe('prestige', () => {
     expect(n.tier).toBe(1);
     n.maps[PRESTIGE.unlockMap] = true;
     earn(n, lifetimeForDm(10));
-    expect(dmGain(n)).toBe(Math.floor(10 * (1 + PRESTIGE.tierDmBonus)));
+    expect(dmGain(n)).toBe(Math.floor(10 * (1 + PRESTIGE.tierDmBonus) * singularityDmMult(1) + 1e-9));
     expect(applyPrestige(n).tier).toBe(1);
   });
 

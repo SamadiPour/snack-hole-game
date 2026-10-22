@@ -73,9 +73,9 @@ const FIXTURES: Record<string, (s: SaveData) => void> = {
     for (const id of ['upgrades', 'helpers', 'abilities', 'maps', 'singularity']) s.flags[`tab_${id}`] = true;
   },
   /**
-   * Endless tiers: tier 12 (past PRESTIGE.tierSizeCap), every Dark Matter upgrade maxed but Dense
-   * Core (10 of 20, with DM for two more levels), Wormhole keeping all maps, Moon Base selected and
-   * one size short of its goal (tier 13 on the next collapse).
+   * Endless tiers: tier 12 (past PRESTIGE.tierSizeCap), every Dark Matter upgrade maxed, Wormhole
+   * keeping all maps, Moon Base selected and one size short of its goal (tier 13 on the next
+   * collapse).
    */
   endless: (s) => {
     s.tier = 12;
@@ -87,8 +87,6 @@ const FIXTURES: Record<string, (s: SaveData) => void> = {
     s.dmTotal = 18301;
     s.dmClaimed = 11438;
     for (const u of DM_UPGRADES) s.dmUpgrades[u.id] = u.max;
-    // Dense Core's late levels cost more DM than tier 12 has earned; leave them to buy.
-    s.dmUpgrades.denseCore = 10;
     Object.assign(s.upgrades, { startSize: 40, speed: 8, cashValue: 10, roundTime: 4, growth: 6, magnet: 8, combo: 7, golden: 6, offline: 4 });
     s.helpers = 4;
     s.helperLevel = 10;

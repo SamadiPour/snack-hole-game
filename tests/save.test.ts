@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { HELPERS, OFFLINE, SAVE_VERSION, UPGRADES } from '../src/config/balance';
-import { buildRoundConfig, cashBreakdown, earn } from '../src/core/economy';
+import { DM_UPGRADES, HELPERS, OFFLINE, SAVE_VERSION, UPGRADES } from '../src/config/balance';
+import { buildRoundConfig, cashBreakdown, dmUpgradeCost, earn } from '../src/core/economy';
 import { decodeSaveText, defaultSave, encodeSaveText, looksLikeSave, migrate, parseSave, serialize } from '../src/core/save';
 
 /** A save as an import or a hand-edited localStorage entry might carry it. */
@@ -34,6 +34,17 @@ describe('loading untrusted saves', () => {
     expect(s.upgrades.startSize).toBe(UPGRADES.find((u) => u.id === 'startSize')!.max);
     expect(s.stats.rounds).toBe(0);
     expect(edited({ helpers: 99 }).helpers).toBe(HELPERS.countCosts.length);
+  });
+
+  it('gives back the Dark Matter of DM upgrade levels above a lowered cap, once', () => {
+    // Dense Core went from 20 levels to 10.
+    const dc = DM_UPGRADES.find((d) => d.id === 'denseCore')!;
+    const s = edited({ dm: 4, dmUpgrades: { denseCore: dc.max + 2 } });
+    expect(s.dmUpgrades.denseCore).toBe(dc.max);
+    expect(s.dm).toBe(4 + dmUpgradeCost('denseCore', dc.max) + dmUpgradeCost('denseCore', dc.max + 1));
+    expect(migrate(JSON.parse(serialize(s)), 0).dm).toBe(s.dm);
+    // No DM upgrade ever went past level 20: a hand-edited level gets nothing more for the rest.
+    expect(edited({ dmUpgrades: { denseCore: 1e9 } }).dm).toBe(edited({ dmUpgrades: { denseCore: 20 } }).dm);
   });
 
   it('adds no keys the default save does not have, even on nested records', () => {

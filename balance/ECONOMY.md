@@ -7,7 +7,10 @@ Matter coefficient): see `tuned/finalist.json` and `notes/phase4.md`. Two formul
 that: Mega Mouth's radius is `x(1.35 + 0.1 (level - 1))` instead of x1.45, and the magnet's range
 and pull use the hole's base radius instead of the Mega-enlarged one. Every cash price is now
 multiplied by the newest unlocked map's value multiplier (`priceScale`), with config prices in
-Suburb money (`notes/phase5.md`). `static/stats.md` is regenerated for the current values. Config values are the source of truth; DESIGN.md is a summary of them.
+Suburb money (`notes/phase5.md`). Phase 7 (`notes/phase7.md`) doubles Dark Matter gains from
+the second Singularity on (the collapse hint follows the formula before that multiplier),
+makes Quantum Helpers +50% per level (2 levels) and Hawking Radiation one +4 h level, and caps
+Event Horizon and Dense Core at 10; the DM tree table in §8 is from before. `static/stats.md` is regenerated for the current values. Config values are the source of truth; DESIGN.md is a summary of them.
 Per-map tables come from `npx tsx balance/static-stats.ts` (full output: `balance/static/stats.md`).
 
 "Points" in the brief = **cash ($)**. "Run" in the brief = **round** (one timed play). A "run" in the

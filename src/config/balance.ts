@@ -103,7 +103,7 @@ export interface UpgradeDef {
  * 4^tier (economy.ts, priceScale). Helper and ability prices are fixed instead (HELPERS, ABILITIES).
  */
 export const UPGRADES: UpgradeDef[] = [
-  { id: 'startSize', name: 'Starting Size', icon: '⭕', desc: 'Begin each round one size bigger.', base: 55, growth: 1.25, max: 45, unlockAt: 0 },
+  { id: 'startSize', name: 'Starting Size', icon: '⭕', desc: 'Begin each round one size bigger.', base: 55, growth: 1.25, max: 50, unlockAt: 0 },
   { id: 'speed', name: 'Speed', icon: '💨', desc: 'Glide around the map 8% faster.', base: 75, growth: 3.25, max: 8, unlockAt: 0 },
   { id: 'cashValue', name: 'Cash Value', icon: '💰', desc: 'Everything you eat is worth 26% more.', base: 125, growth: 2.8, max: 10, unlockAt: 0 },
   { id: 'roundTime', name: 'Round Time', icon: '⏱️', desc: '+10 seconds per round.', base: 500, growth: 2.8, max: 4, unlockAt: 0 },
@@ -230,8 +230,8 @@ export const MAPS: MapDef[] = [
   { id: 'downtown', name: 'Downtown', icon: '🏙️', blurb: 'Busy avenues and towering skyscrapers.', goal: 25, needsSingularities: 0, valueMul: 50, sizeOffset: 16, xpMul: 0.63, seed: 2202 },
   { id: 'harbor', name: 'Harbor', icon: '⚓', blurb: 'Containers, cranes and giant ships.', goal: 23, needsSingularities: 0, valueMul: 233, sizeOffset: 24, xpMul: 0.49, seed: 4404 },
   { id: 'airport', name: 'Airport', icon: '✈️', blurb: 'Jets, hangars and a huge terminal.', goal: 27, needsSingularities: 1, valueMul: 870, sizeOffset: 26, xpMul: 0.94, seed: 5505 },
-  { id: 'spaceport', name: 'Spaceport', icon: '🚀', blurb: 'Launch towers, giant crawlers and rockets ready to fly.', goal: 28, needsSingularities: 2, valueMul: 970, sizeOffset: 31, xpMul: 0.87, seed: 7707 },
-  { id: 'moon', name: 'Moon Base', icon: '🌙', blurb: 'Low gravity, big domes, suspicious cheese.', goal: 24, needsSingularities: 3, valueMul: 1080, sizeOffset: 32, xpMul: 0.81, seed: 6606 },
+  { id: 'spaceport', name: 'Spaceport', icon: '🚀', blurb: 'Launch towers, giant crawlers and rockets ready to fly.', goal: 28, needsSingularities: 2, valueMul: 970, sizeOffset: 36, xpMul: 0.87, seed: 7707 },
+  { id: 'moon', name: 'Moon Base', icon: '🌙', blurb: 'Low gravity, big domes, suspicious cheese.', goal: 24, needsSingularities: 3, valueMul: 1080, sizeOffset: 37, xpMul: 0.81, seed: 6606 },
 ];
 
 /**
@@ -263,7 +263,11 @@ export const MAP_SIZE_MIN_SPAN = 0.15;
  * every such run raises the tier: maps start min(tier, tierSizeCap) sizes smaller, pay and cost
  * tierScale^tier times more, and Dark Matter gains are x(1 + tierDmBonus * tier). The size cap
  * keeps tiers endless: past it a tier only scales the numbers, so every map goal stays reachable
- * (uncapped, Moon Base would start at size 1 from about tier 33).
+ * (uncapped, Moon Base would start at size 1 from about tier 33). Each Singularity already done,
+ * up to `singularityDmCap`, also raises Dark Matter gains by `singularityDmBonus`: the first
+ * Singularity (and so the second run) pays as before, later ones pay x2 for the same lifetime
+ * cash. A higher cap keeps raising gains after the first ones, so later runs shrink fast
+ * (balance/notes/phase7.md).
  */
 export const PRESTIGE = {
   coef: 1.75,
@@ -273,8 +277,13 @@ export const PRESTIGE = {
   unlockMap: 'downtown' as MapId,
   tierScale: 4,
   tierDmBonus: 0.1,
+  singularityDmBonus: 1,
+  singularityDmCap: 1,
   tierSizeCap: 10,
-  /** The Singularity panel calls a gain of this share of all DM earned a good time to collapse. */
+  /**
+   * The Singularity panel calls it a good time to collapse once the Dark Matter formula has grown by
+   * this share since the last Singularity (dmGrowth: before multipliers, so they do not move it).
+   */
   goodGain: 0.5,
 };
 
@@ -298,20 +307,20 @@ export interface DmUpgradeDef {
 }
 
 export const DM_UPGRADES: DmUpgradeDef[] = [
-  { id: 'eventHorizon', name: 'Event Horizon', icon: '🕳️', desc: '+25% cash per level.', base: 2, growth: 1.5, max: 20 },
-  // Levels 11-20 (605 to 71.7K DM) are the late-game sink once the rest of the tree is maxed. At 20,
-  // maxed Starting Size starts Moon Base 1 size below its goal, so a tier-up still takes a round.
-  { id: 'denseCore', name: 'Dense Core', icon: '🟣', desc: '+1 starting size per level.', base: 3, growth: 1.7, max: 20 },
+  { id: 'eventHorizon', name: 'Event Horizon', icon: '🕳️', desc: '+25% cash per level.', base: 2, growth: 1.5, max: 10 },
+  { id: 'denseCore', name: 'Dense Core', icon: '🟣', desc: '+1 starting size per level.', base: 3, growth: 1.7, max: 10 },
   { id: 'headStart', name: 'Head Start', icon: '🎁', desc: 'Start each run with cash (x10 per level).', base: 2, growth: 2, max: 6 },
-  { id: 'quantumHelpers', name: 'Quantum Helpers', icon: '👯', desc: 'Helper holes are 10% bigger and faster per level.', base: 3, growth: 1.8, max: 10 },
+  { id: 'quantumHelpers', name: 'Quantum Helpers', icon: '👯', desc: 'Helper holes are 50% bigger and faster per level.', base: 3, growth: 1.8, max: 2 },
   { id: 'gravityWell', name: 'Gravity Well', icon: '🌌', desc: '+1 magnet level for free, per level.', base: 3, growth: 1.8, max: 6 },
-  { id: 'hawking', name: 'Hawking Radiation', icon: '☢️', desc: '+2 h offline cap per level.', base: 5, growth: 2, max: 3 },
+  { id: 'hawking', name: 'Hawking Radiation', icon: '☢️', desc: '+4 h offline cap.', base: 10, growth: 1, max: 1 },
   { id: 'wormhole', name: 'Wormhole', icon: '🌀', desc: 'Keep unlocked maps through Singularity.', base: 40, growth: 1, max: 1 },
 ];
 
 export const HEAD_START_BASE = 300;
 /** Quantum Helpers: helper radius and speed bonus per level. */
-export const QUANTUM_PER_LEVEL = 0.1;
+export const QUANTUM_PER_LEVEL = 0.5;
+/** Hawking Radiation: offline cap hours per level. */
+export const HAWKING_HOURS = 4;
 
 // ---------------------------------------------------------------- skins
 export interface SkinDef {

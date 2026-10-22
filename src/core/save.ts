@@ -182,11 +182,19 @@ function level(v: number, max = Infinity): number {
   return Math.min(max, Math.floor(v));
 }
 
+/** No DM upgrade has ever had more levels than this, so levels past it come from edited saves. */
+const DM_LEVEL_EVER = 20;
+
 /** Clamps merged numbers to what the game can actually reach and drops unknown ids. */
 function clampToGame(s: SaveData): void {
   for (const u of UPGRADES) s.upgrades[u.id] = level(s.upgrades[u.id], u.max);
   for (const a of ABILITIES) s.abilities[a.id] = level(s.abilities[a.id], a.maxLevel);
-  for (const u of DM_UPGRADES) s.dmUpgrades[u.id] = level(s.dmUpgrades[u.id], u.max);
+  for (const u of DM_UPGRADES) {
+    // Levels above a cap that was lowered give back what they cost (dmUpgradeCost's curve).
+    const owned = Math.min(level(s.dmUpgrades[u.id]), DM_LEVEL_EVER);
+    for (let l = u.max; l < owned; l++) s.dm += Math.ceil(u.base * Math.pow(u.growth, l));
+    s.dmUpgrades[u.id] = level(s.dmUpgrades[u.id], u.max);
+  }
   s.helpers = level(s.helpers, HELPERS.countCosts.length);
   s.helperLevel = level(s.helperLevel, HELPERS.levelMax);
   s.tier = level(s.tier);

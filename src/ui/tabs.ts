@@ -24,6 +24,8 @@ import {
   cashBreakdown,
   completedSets,
   dmForLifetime,
+  dmGainAt,
+  dmGrowth,
   dmLevel,
   dmUpgradeCost,
   gulpSetTypes,
@@ -37,6 +39,7 @@ import {
   mapLockReason,
   mapMaxLevel,
   prestigeUnlocked,
+  singularityDmMult,
   singularityPreview,
   tierDmMult,
   tierUpReady,
@@ -315,20 +318,24 @@ function singularityTab(api: HubApi, cards: Card[]): HTMLElement {
         keeps.replaceChildren(...ledgerRows('You keep', ledger.keeps));
       }
       setText(btn, dm > 0 ? `Reset run for +${formatNumber(dm)} DM` : 'Reset run for Dark Matter');
-      // Progress toward the next whole DM from the lifetime-cash formula.
+      // Progress toward the next whole DM from the lifetime-cash formula, which the multipliers
+      // can turn into several.
       const have = dmForLifetime(s.lifetimeCash);
       const next = lifetimeForDm(have + 1);
       const prev = lifetimeForDm(have);
       const frac = Math.min(1, Math.max(0, (s.lifetimeCash - prev) / (next - prev)));
       bar.style.width = `${(frac * 100).toFixed(1)}%`;
-      barText.textContent = `${formatCash(s.lifetimeCash)} / ${formatCash(next)} lifetime for the next DM`;
+      const step = dmGainAt(s, have + 1) - dmGainAt(s, have);
+      barText.textContent = `${formatCash(s.lifetimeCash)} / ${formatCash(next)} lifetime for ${step > 1 ? `+${formatNumber(step)} DM` : 'the next DM'}`;
       btn.disabled = dm <= 0;
-      const worth = s.dmTotal > 0 && dm >= s.dmTotal * PRESTIGE.goodGain ? ` Good time to collapse: +${Math.round(PRESTIGE.goodGain * 100)}% or more.` : '';
+      const worth = dm > 0 && s.dmClaimed > 0 && dmGrowth(s) >= PRESTIGE.goodGain ? ' Good time to collapse.' : '';
       const tier = s.tier > 0 || tierUpReady(s) ? ` Tier ${s.tier}${tierUpReady(s) ? ` → ${s.tier + 1} on collapse (${s.tier < PRESTIGE.tierSizeCap ? 'bigger world, ' : ''}x${PRESTIGE.tierScale} payouts and prices, DM x${tierDmMult(s.tier + 1).toFixed(1)})` : ''}.` : '';
       // The next map that waits on Singularities: the reason to collapse at all.
       const gate = MAPS.find((m) => m.needsSingularities > s.stats.prestiges);
       const gateText = gate ? ` ${gate.name} needs ${gate.needsSingularities} Singularit${gate.needsSingularities === 1 ? 'y' : 'ies'}${s.stats.prestiges > 0 ? ` (you have ${s.stats.prestiges})` : ''}.` : '';
-      info.textContent = `Each DM ever earned gives +${PRESTIGE.bonusPerDm * 100}% cash forever (you have ${formatNumber(s.dmTotal)}).${headStartCash(s) > 0 ? ` Head Start gives ${formatCash(headStartCash(s))}.` : ''}${gateText}${worth}${tier}`;
+      const sMult = singularityDmMult(s.stats.prestiges);
+      const growth = sMult > 1 ? ` Your Singularities raise DM gains x${formatRate(sMult)}.` : '';
+      info.textContent = `Each DM ever earned gives +${PRESTIGE.bonusPerDm * 100}% cash forever (you have ${formatNumber(s.dmTotal)}).${headStartCash(s) > 0 ? ` Head Start gives ${formatCash(headStartCash(s))}.` : ''}${growth}${gateText}${worth}${tier}`;
     },
   });
   root.appendChild(section('Dark Matter Tree', `Unspent: ${formatNumber(s.dm)} DM`));

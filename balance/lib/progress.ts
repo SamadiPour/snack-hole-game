@@ -128,6 +128,8 @@ const DEFAULT_OVERHEAD: Record<Skill, number> = { strong: 12, average: 20, weak:
 /** Optimizer: levels of one track it scores as a bundle. */
 const LOOKAHEAD = 10;
 const ROUND_CAP = 150;
+/** The first Singularity waits for at least this cash bonus (3 DM at +10% each), as scripts/sim.ts does. */
+const FIRST_GAIN = 0.3;
 
 function options(s: SaveData, withOffline: boolean): Option[] {
   const out: Option[] = [];
@@ -446,8 +448,7 @@ export function play(spec: PlaySpec, model: RoundModel | null): PlayResult {
     const dm = eco.dmGain(save);
     const next = MAPS.find((m) => !save.maps[m.id]);
     const gated = save.mapLevel[now] >= eco.mapDef(now).goal && (!next || save.stats.prestiges < next.needsSingularities);
-    const want = Math.max(3, save.dmTotal * PRESTIGE.goodGain);
-    if (dm >= want && (gated || stuck >= 4)) {
+    if (dm >= FIRST_GAIN / PRESTIGE.bonusPerDm && eco.dmGrowth(save) >= PRESTIGE.goodGain && (gated || stuck >= 4)) {
       run.end = clock;
       run.dm = dm;
       ev('singularity', `#${run.run} +${dm} DM${eco.tierUpReady(save) ? ' (tier up)' : ''}`);

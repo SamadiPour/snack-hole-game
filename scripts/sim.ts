@@ -410,25 +410,25 @@ allRuns: for (let run = 1; run <= RUNS; run++) {
       row.firstPrestigeReady = clock - row.start;
       mark(`pready-${run}`, `Singularity available (${dm} DM)`);
     }
-    // Prestige once the panel calls the gain a good time (PRESTIGE.goodGain, and at least 3 DM: the
-    // panel shows no hint before the first Singularity) and progress has stalled: the newest map's
-    // goal is reached and the next map (or, past Moon Base, the next tier) needs a Singularity, or
-    // the best size on the newest map has not improved for a while.
+    // Prestige once the panel calls the gain a good time (the formula grew PRESTIGE.goodGain since
+    // the last Singularity, eco.dmGrowth; and at least +30% cash, 3 DM at +10% each: the panel shows
+    // no hint before the first Singularity) and progress has stalled: the newest map's goal is reached and the next map (or, past Moon Base, the next tier)
+    // needs a Singularity, or the best size on the newest map has not improved for a while.
     const next = MAPS.find((m) => !save.maps[m.id]);
     const gated = save.mapLevel[now] >= eco.mapDef(now).goal && (!next || save.stats.prestiges < next.needsSingularities);
     if (gated && row.gateDm === null) row.gateDm = save.dmTotal > 0 ? dm / save.dmTotal : Infinity;
     if (gated && row.roundsOn[now] !== row.goalRounds[now]) row.after++;
     else if (!gated) row.stuckBefore = Math.max(row.stuckBefore, stuck);
-    const want = Math.max(3, save.dmTotal * PRESTIGE.goodGain);
+    const ready = dm >= 0.3 / PRESTIGE.bonusPerDm && eco.dmGrowth(save) >= PRESTIGE.goodGain;
     const holdForMoon = HOLD_MOON && !save.maps.moon && row.rounds < 80;
-    if (row.rounds >= ROUND_CAP && !(dm >= want && (gated || stuck >= 4))) {
+    if (row.rounds >= ROUND_CAP && !(ready && (gated || stuck >= 4))) {
       // Not a Singularity: the run is stuck, so the report fails rather than counting one.
       row.end = clock;
       row.capped = true;
       events.push(`${formatDuration(clock).padStart(7)}  run ${run} stopped at the ${ROUND_CAP}-round cap without a Singularity`);
       break allRuns;
     }
-    if (!holdForMoon && dm >= want && (gated || stuck >= 4)) {
+    if (!holdForMoon && ready && (gated || stuck >= 4)) {
       row.end = clock;
       row.dm = dm;
       mark(`prestige-${run}`, `SINGULARITY #${run}: +${dm} DM after ${formatDuration(clock - row.start)} (${row.rounds} rounds)`);
