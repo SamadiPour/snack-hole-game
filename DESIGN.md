@@ -371,10 +371,8 @@ scripts/       sim.ts (balance), smoke.mjs / shots.mjs / ui-shots.mjs (Playwrigh
   or the sun's shadow camera, packed into its first slots; the set is picked again when the view
   has moved part of a margin, so a round's start draws a few hundred props, not all 2,000 twice
   (shadow and colour pass), and swallowed props cost nothing.
-- Frame budget: below High quality, the hub, pause menu and results draw at 30 fps; rounds
-  draw every refresh. Auto quality starts phones and tablets
-  (`pointer: coarse`) at pixel ratio 1.5 and only counts frames as slow against that budget. A
-  phone-sized round went from 1.85 to 1.04 ms GPU per frame (Apple M5 Pro, Metal).
+- Frame budget: every screen draws on every refresh. Auto quality starts phones and tablets
+  (`pointer: coarse`) at pixel ratio 1.5. A phone-sized round went from 1.85 to 1.04 ms GPU per frame (Apple M5 Pro, Metal).
 - See-through occluders: in rounds, props too big to swallow that sit between the camera and the
   hole fade to 45% opacity. They are hidden in their instanced mesh and drawn as a single mesh
   (depth-only pre-pass, then a blended colour pass so only the front surface shows).

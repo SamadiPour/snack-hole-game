@@ -121,12 +121,11 @@ export class GameRenderer {
   }
 
   /**
-   * Called once per frame with the real frame time and the time the game aims to draw frames in
-   * (longer behind menus). Auto quality lowers the pixel ratio a step at a time while frames stay
-   * slower than both SLOW_FRAME and that budget; it also picks up a new devicePixelRatio (window
-   * moved to another screen).
+   * Called once per frame with the real frame time. Auto quality lowers the pixel ratio a step at
+   * a time while frames stay slow; it also picks up a new devicePixelRatio (window moved to
+   * another screen).
    */
-  noteFrame(dt: number, budget: number): void {
+  noteFrame(dt: number): void {
     this.frameDt = dt;
     if (window.devicePixelRatio !== this.dpr) {
       this.dpr = window.devicePixelRatio;
@@ -136,7 +135,7 @@ export class GameRenderer {
     // A long frame counts as at most 50 ms: one hitch (GC, tab coming back) cannot step the
     // quality down, but a device that never gets under the game's 0.1 s frame cap still does.
     this.avgFrame += (Math.min(dt, 0.05) - this.avgFrame) * 0.1;
-    this.slowFor = this.avgFrame > Math.max(SLOW_FRAME, budget * 1.25) ? this.slowFor + dt : 0;
+    this.slowFor = this.avgFrame > SLOW_FRAME ? this.slowFor + dt : 0;
     if (this.slowFor < SLOW_FOR || this.pixelRatio() <= MIN_PIXEL_RATIO) return;
     this.autoRatio = Math.max(MIN_PIXEL_RATIO, this.pixelRatio() - 0.25);
     this.slowFor = 0;
