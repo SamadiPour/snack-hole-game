@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GOLDEN, MAPS, SAVE_VERSION, SIZE } from '../src/config/balance';
+import { GOLDEN, MAPS, SAVE_VERSION, SIZE, TOUR } from '../src/config/balance';
 import { OBJECT_TYPES, footprintOf, typeId } from '../src/config/objects';
 import { Bot } from '../src/core/bot';
 import { buildRoundConfig, radiusForLevel, timeBonusFrac } from '../src/core/economy';
@@ -225,17 +225,34 @@ describe('round end', () => {
     expect(w.main.level).toBe(10);
   });
 
-  it('opens the next tier for a casual hole only once the tier its size brought within reach is eaten', () => {
+  /** A size-11 Tour hole, one cone it just grew into and one it fits at size 13. */
+  function tierWorld() {
     const b = new MapBuilder('suburb', 200, 1);
     const cone = footprintOf(OBJECT_TYPES[typeId('cone')]);
     b.put('cone', -30, -30, 0, { force: true, scale: (fitAt(10) * 0.98) / cone });
     b.put('cone', -55, -30, 0, { force: true, scale: (fitAt(12) * 0.98) / cone });
     const w = new World(b.build('#000', '#000', theme), tourRoundConfig('farm'));
     expect(w.reachable().levels).toBe(0);
-    for (let i = 0; i < 30 * 4; i++) w.step(1 / 30);
+    return w;
+  }
+  const run = (w: World, seconds: number) => {
+    for (let i = 0; i < 30 * seconds; i++) w.step(1 / 30);
+  };
+
+  it('opens the next tier for a casual hole once the tier its size brought within reach is eaten', () => {
+    const w = tierWorld();
+    run(w, 4);
     expect(w.main.level).toBe(10);
     w.objects[0].state = GONE;
-    for (let i = 0; i < 30 * 4; i++) w.step(1 / 30);
+    run(w, 4);
+    expect(w.main.level).toBe(12);
+  });
+
+  it('waits only TOUR.catchUpPatience seconds for a casual hole to eat the tier its size brought within reach', () => {
+    const w = tierWorld();
+    run(w, TOUR.catchUpPatience - 2);
+    expect(w.main.level).toBe(10);
+    run(w, 4);
     expect(w.main.level).toBe(12);
   });
 

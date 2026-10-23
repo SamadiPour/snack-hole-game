@@ -1,4 +1,4 @@
-import { ABILITIES, ABILITY_LEVEL, GOLDEN, HELPERS, MAP_CLEARED_FRACTION, ROUND_END, SIZE, type AbilityId } from '../config/balance';
+import { ABILITIES, ABILITY_LEVEL, GOLDEN, HELPERS, MAP_CLEARED_FRACTION, ROUND_END, SIZE, TOUR, type AbilityId } from '../config/balance';
 import { OBJECT_TYPES, baseValueOf, distToSolid, footprintOf, solidShape, typeId, xpOf } from '../config/objects';
 import {
   comboMult,
@@ -249,6 +249,8 @@ export class World {
   timeBonus = 0;
   private endDelay = 0;
   private reachCheck = 0;
+  /** Casual rounds: seconds catch-up has waited for the props the current size brought within reach. */
+  private catchUpWait = 0;
   /** Objects sorted by footprint, for reachableLeft. */
   private bySize: WObj[] = [];
   /** Map props grouped by type, each sorted by footprint, for nextSnack. `i` skips eaten ones. */
@@ -886,21 +888,31 @@ export class World {
   }
 
   /**
-   * A casual round is due a free level when what fits cannot pay for one, a map prop is still too
-   * big to fit, and nothing the current size brought within reach is left: the player eats each new
-   * tier before the next one opens, and once everything fits the hole stops growing. Event props
-   * come and go, so they are left out.
+   * A casual round is due a free level when what fits cannot pay for one and a map prop is still
+   * too big to fit. While props the current size brought within reach are left, it first waits up
+   * to TOUR.catchUpPatience seconds for the player to eat them: each new tier gets its turn, a
+   * landmark nobody has found holds the hole back no longer than that, and once everything fits the
+   * hole stops growing. Event props come and go, so they are left out.
    */
   private catchUpDue(): boolean {
-    if (this.atMaxSize || this.reachable().levels > 0) return false;
+    if (this.atMaxSize || this.reachable().levels > 0) {
+      this.catchUpWait = 0;
+      return false;
+    }
     const fit = SIZE.fit * radiusForLevel(this.main.level);
     const fitBefore = SIZE.fit * radiusForLevel(this.main.level - 1);
     let tooBig = false;
+    let tierLeft = false;
     for (const o of this.objects) {
       if (o.state !== ALIVE || o.event) continue;
       if (o.f > fit) tooBig = true;
-      else if (o.f > fitBefore) return false;
+      else if (o.f > fitBefore) tierLeft = true;
     }
+    if (tooBig && tierLeft) {
+      this.catchUpWait += ROUND_END.checkEvery;
+      if (this.catchUpWait < TOUR.catchUpPatience) return false;
+    }
+    this.catchUpWait = 0;
     return tooBig;
   }
 

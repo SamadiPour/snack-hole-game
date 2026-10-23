@@ -212,15 +212,20 @@ level, about 9%), and since its reach and pull follow the radius it adds less at
   Leaving keeps the best size and %, but the map starts over next time: there is no mid-map save.
 - **Catch-up growth**: every 0.5 s, once what still fits cannot pay for another size level
   (`reachable().levels === 0`), the hole grows one level for free (`catchUp` event), but only
-  while a map prop is still too big to fit and the props its current size brought within reach
-  are eaten. Each new tier opens once the one before it is eaten, empty stretches of the size
-  ladder pass at a level per 0.5 s, and the hole stops growing once everything left fits.
-  Without catch-up the base hole snacked out on Harbor and later maps with 46–89% eaten, or spent
-  4–6 minutes on one size vacuuming crumbs. Growing until something could pay for a level was
-  tried: most maps reached their max size (3 levels past eating everything) with 15–30% left to
-  eat, and Airport and Spaceport grew 11 sizes in 6 s with about 40% eaten.
+  while a map prop is still too big to fit. While props its current size brought within reach
+  are left, it first waits up to 15 s (`TOUR.catchUpPatience`) for the player to eat them. Each
+  new tier gets its turn, empty stretches of the size ladder pass at a level per 0.5 s, and the
+  hole stops growing once everything left fits. Without catch-up the base hole snacked out on
+  Harbor and later maps with 46–89% eaten, or spent 4–6 minutes on one size vacuuming crumbs.
+  Growing until something could pay for a level was tried: most maps reached their max size
+  (3 levels past eating everything) with 15–30% left to eat, and Airport and Spaceport grew 11
+  sizes in 6 s with about 40% eaten. Waiting with no limit was tried too: a jet on Airport or the
+  big dome on Moon Base that the player had not found yet held the hole at one size for up to
+  112 s (`--human`, 20 seeds), and 156 s for a slower player model.
 - Three stars per map: reach the goal, clear the map, clear it within par (`TOUR.par`: the casual
-  player's median clear, rounded up to 30 s, plus 30 s).
+  player's median clear, rounded up to 30 s, plus 30 s). Moon Base's par is 9:00, 30 s more than
+  that rule gives since the 15 s wait limit: lowering it would take back third stars already
+  earned.
 - Reaching the Moon Base goal completes the Tour, and earning the last of the 21 stars makes it
   perfect: each gets a celebration screen (fanfare, flash) after that round's results.
 - Tour rounds book nothing into the main game (no cash, stats, Gulpedia, trophies or map
@@ -235,10 +240,10 @@ level, about 9%), and since its reach and pull follow the radius it adds less at
 | Happy Farm | 11 | 19 | 2:09 | 7:35 | 6:44 | 8:30 |
 | Downtown | 11 | 26 | 2:37 | 4:06 | 3:30 | 5:00 |
 | Harbor | 11 | 24 | 2:32 | 4:33 | 3:53 | 5:30 |
-| Airport | 11 | 28 | 6:17 | 6:59 | 5:49 | 7:30 |
-| Spaceport | 11 | 29 | 5:39 | 5:55 | 5:46 | 6:30 |
-| Moon Base | 11 | 25 | 6:58 | 8:14 | 6:39 | 9:00 |
-| Whole Tour | | | 28:26 | 43:28 | 37:15 | |
+| Airport | 11 | 28 | 5:53 | 6:47 | 5:39 | 7:30 |
+| Spaceport | 11 | 29 | 5:31 | 5:52 | 5:49 | 6:30 |
+| Moon Base | 11 | 25 | 6:25 | 7:51 | 6:39 | 9:00 |
+| Whole Tour | | | 27:20 | 42:50 | 37:09 | |
 
 The longest stretch without eating anything is 8 s (`--human`). Like the main sim, these times are
 a lower bound for real players.
