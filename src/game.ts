@@ -25,8 +25,6 @@ import { toast } from './ui/toast';
 
 /** Consecutive failing frames before the game stops and shows an error screen. */
 const MAX_FAILED_FRAMES = 30;
-/** Frame rate the game draws at on faster screens, unless graphics quality is High. */
-const TARGET_FPS = 60;
 /** Frame rate behind the hub, the pause menu and the results, where the world is only backdrop. */
 const MENU_FPS = 30;
 
@@ -325,18 +323,15 @@ export class Game implements HubApi {
   }
 
   /**
-   * On screens faster than TARGET_FPS (120 Hz laptops and phones, 144 Hz monitors) only every Nth
-   * refresh is drawn, so the game runs near 60 fps instead of 120+: half the GPU work and heat,
-   * and room for what else the GPU draws (at 120 fps full screen it lagged under the system's
-   * volume overlay). Behind menus it draws at MENU_FPS, which phones need to stay cool between
-   * rounds. High quality draws every refresh.
+   * Behind menus only every Nth refresh is drawn, so the world there runs near MENU_FPS, which
+   * phones need to stay cool between rounds. Rounds and High quality draw every refresh.
    */
   private skipFrame(now: number): boolean {
     const d = now - this.lastCallback;
     this.lastCallback = now;
     if (d > 0 && d < 50) this.refreshMs += (d - this.refreshMs) * 0.05;
-    const fps = this.state === 'round' && !this.pauseMenu ? TARGET_FPS : MENU_FPS;
-    const every = this.save.settings.quality === 'high' ? 1 : Math.max(1, Math.floor((1000 / fps + 0.5) / this.refreshMs));
+    const round = this.state === 'round' && !this.pauseMenu;
+    const every = round || this.save.settings.quality === 'high' ? 1 : Math.max(1, Math.floor((1000 / MENU_FPS + 0.5) / this.refreshMs));
     this.frameBudget = (every * this.refreshMs) / 1000;
     return now - this.last < (every - 0.5) * this.refreshMs;
   }

@@ -341,8 +341,7 @@ src/
                music.ts: one CC0 track per map from public/music/ (CREDITS.md), looped
                gaplessly, cross-faded on map change, quieter in the hub, ducked while paused
   dev/         dev-only URL testing flags (?mute, ?fresh, ?save=NAME, ?seed=N) and fixture saves
-  game.ts      state machine (hub → round → results), autosave, offline, purchases, crash guard,
-               frame cap (below High quality, 120 Hz+ screens draw every other refresh)
+  game.ts      state machine (hub → round → results), autosave, offline, purchases, crash guard
   persistence.ts  SaveStore: localStorage (memory for dev test saves), backup, damaged-save copy,
                one saving tab, warning when the browser refuses a write
   round-fx.ts  RoundFeedback: world events → sounds, particles, banners, floaters, shake,
@@ -372,8 +371,8 @@ scripts/       sim.ts (balance), smoke.mjs / shots.mjs / ui-shots.mjs (Playwrigh
   or the sun's shadow camera, packed into its first slots; the set is picked again when the view
   has moved part of a margin, so a round's start draws a few hundred props, not all 2,000 twice
   (shadow and colour pass), and swallowed props cost nothing.
-- Frame budget: below High quality, 120 Hz+ screens draw every other refresh (about 60 fps), and
-  the hub, pause menu and results draw at 30 fps. Auto quality starts phones and tablets
+- Frame budget: below High quality, the hub, pause menu and results draw at 30 fps; rounds
+  draw every refresh. Auto quality starts phones and tablets
   (`pointer: coarse`) at pixel ratio 1.5 and only counts frames as slow against that budget. A
   phone-sized round went from 1.85 to 1.04 ms GPU per frame (Apple M5 Pro, Metal).
 - See-through occluders: in rounds, props too big to swallow that sit between the camera and the
