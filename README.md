@@ -1,7 +1,7 @@
 # Snack Hole
 
 [![Play on GitHub Pages](https://img.shields.io/badge/Play-GitHub%20Pages-24292F?style=for-the-badge&logo=github&logoColor=white)](https://samadipour.github.io/snack-hole-game/)
-[![Play on itch.io](https://img.shields.io/badge/Play-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=white)](https://samadipoor.itch.io/snack-hole)
+[![Play on itch.io](https://img.shields.io/badge/Play-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=white)](https://samadipour.itch.io/snack-hole)
 
 A hole roams a bright low-poly world and swallows everything smaller than itself — cones, people,
 cars, houses, skyscrapers, cargo ships, jumbo jets — feeding a deep incremental meta-game.

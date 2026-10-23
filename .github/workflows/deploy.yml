@@ -77,8 +77,8 @@ jobs:
           unzip -q butler.zip -d "$RUNNER_TEMP/butler"
           chmod +x "$RUNNER_TEMP/butler/butler"
           echo "$RUNNER_TEMP/butler" >> "$GITHUB_PATH"
-      # The html5 channel is the browser-played upload on https://samadipoor.itch.io/snack-hole.
+      # The html5 channel is the browser-played upload on https://samadipour.itch.io/snack-hole.
       - name: Push to itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
-        run: butler push itch/build samadipoor/snack-hole:html5 --userversion "${GITHUB_SHA::7}"
+        run: butler push itch/build samadipour/snack-hole:html5 --userversion "${GITHUB_SHA::7}"
