@@ -7,6 +7,7 @@ import { setScientific } from './core/format';
 import { generateMap } from './core/mapgen';
 import { settleRound, summarizeRound } from './core/round';
 import { encodeSaveText, serialize, type SaveData } from './core/save';
+import { inTourMode, nextTourMap, openNextTourMap, settleTour, tourRoundConfig } from './core/tour';
 import { World } from './core/world';
 import { devFlags } from './dev/flags';
 import { SaveStore } from './persistence';
@@ -44,6 +45,8 @@ export class Game implements HubApi {
   private last = performance.now();
   private hubRestart = 0;
   private hiddenAt = 0;
+  /** Map the current Tour round opened, for its results screen. */
+  private tourOpened: MapId | null = null;
   /** Open pause menu during a round; the simulation is frozen while set. */
   private pauseMenu: ModalHandle | null = null;
   private frameMs = 0;
@@ -190,17 +193,23 @@ export class Game implements HubApi {
     this.hud.show(false);
     this.hub.show(true);
     this.startDemo();
-    this.audio.setAmbient(this.save.selectedMap);
+    this.audio.setAmbient(this.hubMap());
     this.audio.setMusicMode('hub');
   }
 
-  /** Attract mode behind the hub: a bot-driven hole roams the selected map. */
+  /** The map PLAY starts: the selected Tour map in Tour mode, else the selected map. */
+  private hubMap(): MapId {
+    return inTourMode(this.save) ? this.save.tour.selectedMap : this.save.selectedMap;
+  }
+
+  /** Attract mode behind the hub: a bot-driven hole roams the map PLAY starts. */
   private startDemo(): void {
-    const cfg = eco.buildRoundConfig(this.save);
+    const mapId = this.hubMap();
+    const cfg = inTourMode(this.save) ? tourRoundConfig(mapId) : eco.buildRoundConfig(this.save, mapId);
     cfg.startLevel = Math.max(5, cfg.startLevel + 3);
     cfg.helpers = 0;
     cfg.cashMult = 0;
-    this.world = new World(generateMap(this.save.selectedMap), cfg, { demo: true, seed: devFlags.seed ?? (Date.now() & 0xffff) });
+    this.world = new World(generateMap(mapId), cfg, { demo: true, seed: devFlags.seed ?? (Date.now() & 0xffff) });
     this.renderer.setWorld(this.world);
     this.hubRestart = 0;
     prewarmThumbs(new Set(this.world.objects.map((o) => o.t)));
@@ -208,35 +217,54 @@ export class Game implements HubApi {
 
   play(): void {
     if (this.state !== 'hub' || anyModalOpen()) return;
+    if (inTourMode(this.save)) this.startTour(this.save.tour.selectedMap);
+    else this.begin(() => eco.buildRoundConfig(this.save));
+  }
+
+  /** Starts a casual Tour round on an open Tour map, selecting it for the hub's next PLAY. */
+  private startTour(id: MapId): void {
+    if (!this.save.tour.maps[id]) return;
+    this.save.tour.selectedMap = id;
+    this.begin(() => tourRoundConfig(id));
+  }
+
+  private begin(config: () => eco.RoundConfig): void {
     // A half-started round has no way out, so any error here stops the game with the error screen.
     try {
-      this.startRound();
+      this.startRound(config());
     } catch (err) {
       console.error(err);
       this.crash(err);
     }
   }
 
-  private startRound(): void {
+  private startRound(cfg: eco.RoundConfig): void {
     this.audio.unlock();
     this.audio.click();
     this.setState('round');
     this.hub.show(false);
-    const cfg = eco.buildRoundConfig(this.save);
-    this.world = new World(generateMap(this.save.selectedMap), cfg, { seed: devFlags.seed ?? (Date.now() & 0xffffff) + 1 });
+    this.world = new World(generateMap(cfg.mapId), cfg, { seed: devFlags.seed ?? (Date.now() & 0xffffff) + 1 });
     this.renderer.setWorld(this.world);
     this.hud.setup(this.world);
     this.hud.show(true);
     this.input.enabled = true;
     this.fx.newRound();
-    const first = this.save.stats.rounds === 0;
-    this.hud.banner(first ? 'EAT!' : 'GO!', first ? 'Swallow anything smaller than the hole' : eco.mapDef(cfg.mapId).name);
-    if (first) {
+    this.tourOpened = null;
+    const map = eco.mapDef(cfg.mapId);
+    if (cfg.casual) {
+      const next = nextTourMap(cfg.mapId);
+      this.hud.banner('GO!', `${map.name} · Casual Tour`);
+      this.hud.hint(next && !this.save.tour.maps[next.id] ? `🎯 Reach size ${map.goal + 1} to open ${next.name}` : '🍽️ No timer: eat it all at your own pace', 6);
+    } else if (this.save.stats.rounds === 0) {
+      this.hud.banner('EAT!', 'Swallow anything smaller than the hole');
       const touch = matchMedia('(pointer: coarse)').matches;
       this.hud.hint(touch ? '👆 Drag anywhere to steer the hole' : '🖱️ Point where you want to go (or use WASD / arrows)', 9);
-    } else if (this.save.stats.rounds === 1) this.hud.hint('Bigger hole = bigger snacks. Keep eating to grow!', 5);
-    else if (cfg.abilities.dash.level > 0 && this.save.stats.abilitiesUsed === 0) this.hud.hint('⚡ Press Space or tap the ability button to Dash', 6);
-    else this.hud.hideHint();
+    } else {
+      this.hud.banner('GO!', map.name);
+      if (this.save.stats.rounds === 1) this.hud.hint('Bigger hole = bigger snacks. Keep eating to grow!', 5);
+      else if (cfg.abilities.dash.level > 0 && this.save.stats.abilitiesUsed === 0) this.hud.hint('⚡ Press Space or tap the ability button to Dash', 6);
+      else this.hud.hideHint();
+    }
     this.audio.setAmbient(cfg.mapId);
     this.audio.setMusicMode('round');
   }
@@ -254,6 +282,7 @@ export class Game implements HubApi {
         timeLeft: w.timeLeft,
         cash: w.cash,
         mapName: eco.mapDef(w.cfg.mapId).name,
+        tour: w.cfg.casual ? { played: w.time, percent: w.percentEaten } : null,
         onSettings: () => this.openSettings(),
         onQuit: () => {
           if (this.world === w && w.running) w.timeLeft = 0;
@@ -290,6 +319,14 @@ export class Game implements HubApi {
     this.setState('results');
     this.input.enabled = false;
     this.input.reset();
+    if (w.cfg.casual) {
+      const r = settleTour(this.save, summarizeRound(w));
+      this.persist();
+      const next = nextTourMap(w.cfg.mapId);
+      const onNext = next && this.save.tour.maps[next.id] ? () => this.startTour(next.id) : null;
+      this.fx.showTourResults(w, r, this.tourOpened ?? r.opened, () => this.enterHub(), onNext);
+      return;
+    }
     const r = settleRound(this.save, summarizeRound(w));
     this.fx.mapsUnlocked(r.unlockedMaps);
     this.grantAchievements();
@@ -363,6 +400,7 @@ export class Game implements HubApi {
         // Drop the batch even when a handler throws, so one bad event never replays every frame.
         w.events.length = 0;
       }
+      if (this.state === 'round' && w.cfg.casual) this.noteTourGoal(w);
       this.simMs += (performance.now() - ts - this.simMs) * 0.05;
       if (this.state === 'hub') {
         this.hubRestart += dt;
@@ -384,6 +422,15 @@ export class Game implements HubApi {
     }
     if (this.debug?.open) this.debug.refresh();
     this.frameMs += (performance.now() - t0 - this.frameMs) * 0.05;
+  }
+
+  /** Opens the next Tour map the moment the round reaches the goal, so leaving the tab keeps it. */
+  private noteTourGoal(w: World): void {
+    const opened = openNextTourMap(this.save, w.cfg.mapId, w.main.level);
+    if (!opened) return;
+    this.tourOpened = opened;
+    this.fx.tourOpened(opened);
+    this.persist();
   }
 
   /**
@@ -444,9 +491,27 @@ export class Game implements HubApi {
   selectMap(id: MapId): void {
     if (!this.save.maps[id] || this.state !== 'hub') return;
     this.save.selectedMap = id;
+    this.afterHubMapChange();
+  }
+
+  selectTourMap(id: MapId): void {
+    if (!this.save.tour.maps[id] || this.state !== 'hub' || id === this.save.tour.selectedMap) return;
+    this.save.tour.selectedMap = id;
+    this.afterHubMapChange();
+  }
+
+  /** The Classic / Tour switch above PLAY. */
+  setTourMode(on: boolean): void {
+    if (this.state !== 'hub' || this.save.tour.active === on) return;
+    this.save.tour.active = on;
+    this.afterHubMapChange();
+  }
+
+  /** The map behind the hub follows what PLAY starts. */
+  private afterHubMapChange(): void {
     this.audio.click();
     this.startDemo();
-    this.audio.setAmbient(id);
+    this.audio.setAmbient(this.hubMap());
     this.hub.markDirty();
   }
 

@@ -312,6 +312,8 @@ describe('prestige', () => {
     s.map100.suburb = true;
     s.mapLevel.suburb = 12;
     s.recentRoundCash.push(5);
+    s.tour.maps.farm = true;
+    s.tour.bestClear.suburb = 300;
     const n = applyPrestige(s);
     expect(n.dm).toBe(10);
     expect(n.cash).toBe(0);
@@ -322,6 +324,8 @@ describe('prestige', () => {
     expect(n.gulpedia.car).toBe(3);
     expect(n.achievements).toContain('firstBite');
     expect(n.map100.suburb).toBe(true);
+    expect(n.tour.maps.farm).toBe(true);
+    expect(n.tour.bestClear.suburb).toBe(300);
     expect(n.stats.prestiges).toBe(1);
   });
 

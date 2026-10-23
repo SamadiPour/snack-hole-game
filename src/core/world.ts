@@ -132,6 +132,8 @@ export type WEvent =
   | { k: 'cleared' }
   /** Nothing reachable is left: the round finishes early with a time bonus. */
   | { k: 'snackedOut'; bonusFrac: number }
+  /** Casual round where nothing left can grow the hole: it grows a level for free (a `level` follows). */
+  | { k: 'catchUp' }
   | { k: 'end' };
 
 export type EndReason = 'timeUp' | 'cleared' | 'snackedOut';
@@ -241,6 +243,8 @@ export class World {
   running = true;
   ended = false;
   endReason: EndReason | null = null;
+  /** World time when the round stopped (0 while it runs). */
+  endedAt = 0;
   /** Cash paid for finishing early (already included in `cash`). */
   timeBonus = 0;
   private endDelay = 0;
@@ -881,6 +885,14 @@ export class World {
     h.baseR = radiusForLevel(h.level);
   }
 
+  /** One free size level for a casual round where nothing left can grow the hole. */
+  private catchUp(): void {
+    const h = this.main;
+    this.events.push({ k: 'catchUp' });
+    h.xp = Math.max(h.xp, xpForLevel(h.level));
+    this.gainXp(0);
+  }
+
   private updateFalling(dt: number): void {
     const f = this.falling;
     for (let i = f.length - 1; i >= 0; i--) {
@@ -920,13 +932,20 @@ export class World {
         this.reachCheck -= dt;
         if (this.reachCheck <= 0) {
           this.reachCheck = ROUND_END.checkEvery;
-          // A random event still to come brings new snacks: start it now instead of ending.
-          if (!this.roundEvents.current && this.snackedOut() && !this.roundEvents.hurry()) snackedOut = true;
+          if (this.cfg.casual) {
+            // Casual rounds have no timer to end them: once what is left cannot grow the hole, it
+            // grows for free, so the bigger props come within reach instead of a long crumb hunt.
+            if (!this.atMaxSize && this.reachable().levels === 0) this.catchUp();
+          } else if (!this.roundEvents.current && this.snackedOut() && !this.roundEvents.hurry()) {
+            // A random event still to come brings new snacks: hurry() starts it instead of ending.
+            snackedOut = true;
+          }
         }
       }
       if (this.timeLeft <= 0 || cleared || snackedOut) {
         this.timeLeft = Math.max(0, this.timeLeft);
         this.running = false;
+        this.endedAt = this.time;
         this.endReason = cleared ? 'cleared' : snackedOut ? 'snackedOut' : 'timeUp';
         const bonusFrac = this.endReason === 'timeUp' ? 0 : timeBonusFrac(this.timeLeft);
         this.timeBonus = this.cash * bonusFrac;

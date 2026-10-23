@@ -1,19 +1,33 @@
-import { MAPS } from '../config/balance';
+import { MAPS, TOUR } from '../config/balance';
 import { mapDef, mapMaxLevel, roundTimeFor, startLevel } from '../core/economy';
-import { formatCash, formatNumber, formatPercent } from '../core/format';
+import { formatCash, formatDuration, formatNumber, formatPercent } from '../core/format';
 import type { SaveData } from '../core/save';
+import { inTourMode, tourStarTotal, tourStars, tourStartLevel, tourUnlocked } from '../core/tour';
 import type { Card } from './cards';
 import { h, setText, toggleClass } from './dom';
-import { TABS, renderTab, type HubApi, type TabId } from './tabs';
+import { TABS, renderTab, starText, tourPanel, type HubApi, type TabId } from './tabs';
 
-/** Between-rounds screen: top bar, big Play button and the tabbed shop panel. */
+/**
+ * Between-rounds screen: top bar, big Play button and the tabbed shop panel. A Classic / Tour
+ * switch above PLAY flips it into Tour mode: a star count instead of cash, a Tour map picker, and
+ * the Tour map list in place of the shop.
+ */
 export class Hub {
   readonly root: HTMLDivElement;
+  private cashWrap: HTMLDivElement;
   private cash: HTMLDivElement;
   private dm: HTMLDivElement;
+  private stars: HTMLDivElement;
   private tabBar: HTMLDivElement;
   private content: HTMLDivElement;
+  private modeSwitch: HTMLDivElement;
+  private classicBtn: HTMLButtonElement;
+  private tourBtn: HTMLButtonElement;
+  private prevMap: HTMLButtonElement;
+  private nextMap: HTMLButtonElement;
   private playMap: HTMLDivElement;
+  private playMapName: HTMLSpanElement;
+  private playMapStars: HTMLSpanElement;
   private playInfo: HTMLDivElement;
   private playBtn: HTMLButtonElement;
   private cards: Card[] = [];
@@ -32,13 +46,22 @@ export class Hub {
     private api: HubApi,
   ) {
     this.cash = h('div', { class: 'top-cash' });
+    this.cashWrap = h('div', { class: 'top-cash-wrap' }, this.cash);
     this.dm = h('div', { class: 'top-dm' });
+    this.stars = h('div', { class: 'top-stars hidden' });
     const settings = h('button', { class: 'icon-btn', title: 'Settings', 'aria-label': 'Settings', onclick: () => this.onSettings?.() }, '⚙️');
     this.tabBar = h('div', { class: 'tab-bar', role: 'tablist', 'aria-label': 'Shop' });
     // Focusable as a fallback target, so focus never drops to <body> when the panel rebuilds.
     this.content = h('div', { class: 'tab-content', role: 'tabpanel', tabindex: '-1' });
     this.content.addEventListener('click', (e) => (this.pressed = e.target instanceof Element ? e.target : null), true);
-    this.playMap = h('div', { class: 'play-map' });
+    this.classicBtn = h('button', { class: 'mode-btn', onclick: () => api.setTourMode(false) }, 'Classic');
+    this.tourBtn = h('button', { class: 'mode-btn', onclick: () => api.setTourMode(true) }, '🧭 Tour');
+    this.modeSwitch = h('div', { class: 'mode-switch hidden', role: 'group', 'aria-label': 'Game mode' }, this.classicBtn, this.tourBtn);
+    this.prevMap = h('button', { class: 'icon-btn map-step', 'aria-label': 'Previous Tour map', onclick: () => this.stepTourMap(-1) }, '‹');
+    this.nextMap = h('button', { class: 'icon-btn map-step', 'aria-label': 'Next Tour map', onclick: () => this.stepTourMap(1) }, '›');
+    this.playMapName = h('span');
+    this.playMapStars = h('span', { class: 'play-stars' });
+    this.playMap = h('div', { class: 'play-map' }, this.playMapName, this.playMapStars);
     this.playInfo = h('div', { class: 'play-info' });
     this.playBtn = h('button', { class: 'play-btn', onclick: () => this.onPlay?.() }, h('span', { class: 'play-icon' }, '▶'), 'PLAY');
     this.root = h(
@@ -48,10 +71,10 @@ export class Hub {
         'div',
         { class: 'topbar' },
         h('div', { class: 'brand' }, h('span', { class: 'brand-hole' }), h('span', { class: 'brand-text' }, 'Snack Hole')),
-        h('div', { class: 'top-stats' }, h('div', { class: 'top-cash-wrap' }, this.cash), this.dm),
+        h('div', { class: 'top-stats' }, this.cashWrap, this.dm, this.stars),
         settings,
       ),
-      h('div', { class: 'play-area' }, this.playMap, this.playBtn, this.playInfo),
+      h('div', { class: 'play-area' }, this.modeSwitch, h('div', { class: 'play-map-row' }, this.prevMap, this.playMap, this.nextMap), this.playBtn, this.playInfo),
       h('div', { class: 'panel' }, this.tabBar, this.content),
     );
     parent.appendChild(this.root);
@@ -77,6 +100,14 @@ export class Hub {
     this.dirty = true;
   }
 
+  /** Selects the open Tour map `dir` steps before or after the selected one. */
+  private stepTourMap(dir: number): void {
+    const s = this.api.save;
+    const open = MAPS.filter((m) => s.tour.maps[m.id]);
+    const to = open[open.findIndex((m) => m.id === s.tour.selectedMap) + dir];
+    if (to) this.api.selectTourMap(to.id);
+  }
+
   /**
    * Rebuilding replaces every button. Focus moves to the same tab or the same position in the
    * panel afterwards; otherwise it would drop to <body>, where Enter / Space start a round.
@@ -91,10 +122,14 @@ export class Hub {
     const focusIndex = focused instanceof HTMLElement && this.content.contains(focused) ? panelButtons().indexOf(focused) : -2;
     this.tabBar.innerHTML = '';
     this.tabButtons.clear();
-    const visible = TABS.filter((t) => t.visible(s));
-    if (!visible.some((t) => t.id === this.tab)) this.tab = 'upgrades';
-    s.flags.tab_upgrades = true;
-    if (this.tab) s.flags[`tab_${this.tab}`] = true;
+    const tour = inTourMode(s);
+    toggleClass(this.tabBar, 'hidden', tour);
+    const visible = tour ? [] : TABS.filter((t) => t.visible(s));
+    if (!tour && !visible.some((t) => t.id === this.tab)) this.tab = 'upgrades';
+    if (!tour) {
+      s.flags.tab_upgrades = true;
+      s.flags[`tab_${this.tab}`] = true;
+    }
     for (const t of visible) {
       const isNew = !s.flags[`tab_${t.id}`];
       const b = h(
@@ -124,7 +159,7 @@ export class Hub {
     const scroll = this.content.scrollTop;
     this.content.innerHTML = '';
     this.cards = [];
-    this.content.appendChild(renderTab(this.tab, this.api, this.cards));
+    this.content.appendChild(tour ? tourPanel(this.api, this.cards) : renderTab(this.tab, this.api, this.cards));
     // Fill the live text first: restoring the scroll into a panel that is still short (the
     // Singularity hero is empty until its first update) clamps it.
     for (const c of this.cards) c.update();
@@ -140,12 +175,13 @@ export class Hub {
     }
   }
 
-  /** Keeps tab visibility in sync as cash crosses unlock thresholds. */
+  /** Keeps tab visibility in sync as cash crosses unlock thresholds, and the panel with the mode. */
   private visibleSignature(): string {
     const s = this.api.save;
-    return TABS.filter((t) => t.visible(s))
+    const tabs = TABS.filter((t) => t.visible(s))
       .map((t) => t.id)
       .join(',');
+    return `${inTourMode(s)}:${tabs}`;
   }
 
   private lastSig = '';
@@ -166,11 +202,27 @@ export class Hub {
     if (this.acc < 0.1 && s.cash === this.lastCash) return;
     this.acc = 0;
     this.lastCash = s.cash;
+    const tour = inTourMode(s);
+    toggleClass(this.modeSwitch, 'hidden', !tourUnlocked(s));
+    for (const [b, on] of [[this.classicBtn, !tour], [this.tourBtn, tour]] as const) {
+      toggleClass(b, 'on', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
+    toggleClass(this.cashWrap, 'hidden', tour);
+    toggleClass(this.dm, 'hidden', tour || !(s.dmTotal > 0 || s.dm > 0));
+    toggleClass(this.stars, 'hidden', !tour);
+    toggleClass(this.prevMap, 'hidden', !tour);
+    toggleClass(this.nextMap, 'hidden', !tour);
+    if (tour) {
+      this.updateTour(s);
+      for (const c of this.cards) c.update();
+      return;
+    }
     setText(this.cash, formatCash(s.cash));
     setText(this.dm, s.dmTotal > 0 || s.dm > 0 ? `🌑 ${formatNumber(s.dm)} DM` : '');
-    toggleClass(this.dm, 'hidden', !(s.dmTotal > 0 || s.dm > 0));
     const m = mapDef(s.selectedMap);
-    setText(this.playMap, `${m.icon} ${m.name}`);
+    setText(this.playMapName, `${m.icon} ${m.name}`);
+    setText(this.playMapStars, '');
     const first = s.stats.rounds === 0;
     const start = startLevel(s);
     const maxed = start >= mapMaxLevel(s.selectedMap) ? ' (max)' : '';
@@ -181,6 +233,19 @@ export class Hub {
         : `${roundTimeFor(s)}s · start size ${start + 1}${maxed} · ${goalText(s)}`,
     );
     for (const c of this.cards) c.update();
+  }
+
+  private updateTour(s: SaveData): void {
+    const id = s.tour.selectedMap;
+    const m = mapDef(id);
+    const open = MAPS.filter((o) => s.tour.maps[o.id]);
+    const i = open.findIndex((o) => o.id === id);
+    this.prevMap.disabled = i <= 0;
+    this.nextMap.disabled = i >= open.length - 1;
+    setText(this.stars, `★ ${tourStarTotal(s)} of ${MAPS.length * 3}`);
+    setText(this.playMapName, `${m.icon} ${m.name}`);
+    setText(this.playMapStars, starText(tourStars(s, id)));
+    setText(this.playInfo, `No timer · start size ${tourStartLevel(id) + 1} · goal size ${m.goal + 1} · par ${formatDuration(TOUR.par[id])}`);
   }
 }
 

@@ -1,15 +1,16 @@
-import { SIZE, type MapId } from './config/balance';
+import { SIZE, TOUR, type MapId } from './config/balance';
 import { OBJECT_TYPES } from './config/objects';
 import type { Audio } from './audio/audio';
 import * as eco from './core/economy';
 import { formatCash } from './core/format';
 import type { RoundSettlement } from './core/round';
 import type { SaveData } from './core/save';
+import { nextTourMap, type TourSettlement } from './core/tour';
 import type { EventId, World, WObj } from './core/world';
 import { reducedMotion } from './render/motion';
 import type { GameRenderer } from './render/scene';
 import { cachedThumb, thumbFor } from './render/thumbs';
-import { showResults } from './ui/dialogs';
+import { showResults, showTourResults } from './ui/dialogs';
 import { h } from './ui/dom';
 import type { Hud } from './ui/hud';
 import { toast } from './ui/toast';
@@ -90,6 +91,47 @@ export class RoundFeedback {
       const m = eco.mapDef(id);
       toast(`${m.name} unlocked!`, m.sizeOffset ? `A bigger world: you start ${m.sizeOffset} sizes smaller here.` : 'Everything is worth more here.', { icon: m.icon });
     }
+  }
+
+  /** A Tour round reached its goal and opened the next map. */
+  tourOpened(id: MapId): void {
+    const m = eco.mapDef(id);
+    this.d.hud.banner('NEXT MAP OPEN!', `${m.icon} ${m.name}`);
+    toast(`${m.name} is open!`, 'Keep eating, or leave from the pause menu and head there.', { icon: m.icon });
+  }
+
+  /** The results screen for a settled Tour round. `opened` is the map the round opened, if any. */
+  showTourResults(w: World, r: TourSettlement, opened: MapId | null, onTour: () => void, onNext: (() => void) | null): void {
+    // A cleared map already played the big fanfare when it happened.
+    if (!r.cleared) this.d.audio.fanfare();
+    const m = eco.mapDef(w.cfg.mapId);
+    const next = nextTourMap(m.id);
+    const biggest = w.biggest;
+    const place = (id: MapId) => ({ name: eco.mapDef(id).name, icon: eco.mapDef(id).icon });
+    showTourResults(
+      {
+        mapName: m.name,
+        cleared: r.cleared,
+        time: w.endedAt || w.time,
+        percent: w.percentEaten,
+        level: w.main.level,
+        combo: w.comboBest,
+        eaten: w.eaten,
+        biggestName: biggest ? OBJECT_TYPES[biggest.t].name : '',
+        biggestImg: biggest ? thumbFor(biggest.t, biggest.tint) : '',
+        stars: r.stars,
+        newStars: r.stars - r.starsBefore,
+        goal: m.goal,
+        par: TOUR.par[m.id],
+        bestLevel: r.bestLevel,
+        bestPercent: r.bestPercent,
+        bestTime: r.bestTime,
+        opened: opened ? place(opened) : null,
+        next: next ? place(next.id) : null,
+      },
+      onTour,
+      onNext,
+    );
   }
 
   /** The results screen for a settled round, with the end fanfare. */
@@ -188,6 +230,8 @@ export class RoundFeedback {
           break;
         case 'timeUp':
           hud.hideHint();
+          // A casual round only stops this way when the player leaves the map.
+          if (w.cfg.casual) break;
           audio.whistle();
           hud.banner("TIME'S UP!", '', 'big');
           break;
@@ -235,11 +279,13 @@ export class RoundFeedback {
     const s = this.d.save();
     const t = o.t;
     const f = o.f;
+    const casual = w.cfg.casual;
     if (o.gold) {
       audio.goldDing();
       renderer.particles.swallowBurst(w.main.x, w.main.z, w.main.r, '#ffd23d', 16, true);
     }
-    if (s.settings.floaters && (o.gold || (this.floatersThisFrame < 4 && hud.floaterCount < 40))) {
+    // Casual rounds pay no cash, so they show no cash floaters.
+    if (!casual && s.settings.floaters && (o.gold || (this.floatersThisFrame < 4 && hud.floaterCount < 40))) {
       this.floatersThisFrame++;
       const p = renderer.project(o.x, Math.min(o.h, 4), o.z);
       if (p) {
@@ -248,10 +294,11 @@ export class RoundFeedback {
       }
     }
     this.maybeLandmark(w, o, cash);
-    hud.bumpCash();
+    if (!casual) hud.bumpCash();
     renderer.pulseHole(Math.min(1, 0.25 + f / w.main.r));
     const id = OBJECT_TYPES[t].id;
-    if (!s.gulpedia[id] && !this.roundDiscoveries.has(t)) {
+    if (casual) this.roundDiscoveries.add(t);
+    else if (!s.gulpedia[id] && !this.roundDiscoveries.has(t)) {
       this.roundDiscoveries.add(t);
       toast(`New: ${OBJECT_TYPES[t].name}`, 'Added to the Gulpedia', { img: cachedThumb(t) || undefined, icon: '✨', kind: 'gulp', ms: 2200 });
     }
@@ -260,13 +307,14 @@ export class RoundFeedback {
   /**
    * Landmarks get two tiers. The first one of a kind ever (new to the Gulpedia) gets the full
    * moment: slow-motion, camera pull-back, dust, rumble and a banner. Later ones near your size
-   * limit get a light version (dust, rumble, shake) that does not interrupt play.
+   * limit get a light version (dust, rumble, shake) that does not interrupt play. Casual rounds
+   * book nothing into the Gulpedia, so there the first of a kind in the round gets the full moment.
    */
   private maybeLandmark(w: World, o: WObj, cash: number): void {
     const { renderer, audio } = this.d;
     const def = OBJECT_TYPES[o.t];
     if (!def.landmark || this.d.state() !== 'round') return;
-    const firstEver = !this.d.save().gulpedia[def.id] && !this.roundDiscoveries.has(o.t);
+    const firstEver = (w.cfg.casual || !this.d.save().gulpedia[def.id]) && !this.roundDiscoveries.has(o.t);
     if (firstEver) {
       this.landmarkCd = 2.5;
       this.slowmo = SLOWMO;
@@ -274,7 +322,7 @@ export class RoundFeedback {
       renderer.landmarkBurst(w, o.f, true);
       this.shake(0.9);
       audio.landmark(o.f, true);
-      this.d.hud.banner('NEW LANDMARK!', `${o.gold ? '✨ Golden ' : ''}${def.name} · +${formatCash(cash)}`);
+      this.d.hud.banner('NEW LANDMARK!', w.cfg.casual ? def.name : `${o.gold ? '✨ Golden ' : ''}${def.name} · +${formatCash(cash)}`);
       return;
     }
     if (this.landmarkCd > 0 || o.f < 0.55 * SIZE.fit * w.main.r) return;

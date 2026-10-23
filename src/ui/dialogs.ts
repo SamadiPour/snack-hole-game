@@ -156,18 +156,27 @@ export interface PauseInfo {
   timeLeft: number;
   cash: number;
   mapName: string;
+  /** Casual Tour round: seconds played and share of the map eaten (it has no timer or cash). */
+  tour: { played: number; percent: number } | null;
   onSettings: () => void;
   onQuit: () => void;
 }
 
 /** Mid-round pause menu. Closing it (button, backdrop, Esc) resumes via `onClose`. */
 export function showPause(info: PauseInfo, onClose: () => void): ModalHandle {
+  const t = info.tour;
   const m = modal(
     h(
       'div',
       { class: 'pause' },
       h('h2', null, '⏸ Paused'),
-      h('p', { class: 'modal-text' }, `${info.mapName} · ${formatDuration(Math.ceil(info.timeLeft))} left · ${formatCash(info.cash)} so far`),
+      h(
+        'p',
+        { class: 'modal-text' },
+        t
+          ? `${info.mapName} · ${formatDuration(t.played)} played · ${formatPercent(t.percent)} eaten`
+          : `${info.mapName} · ${formatDuration(Math.ceil(info.timeLeft))} left · ${formatCash(info.cash)} so far`,
+      ),
       h('button', { class: 'btn primary big', onclick: () => m.close() }, 'Resume'),
       h(
         'div',
@@ -182,10 +191,14 @@ export function showPause(info: PauseInfo, onClose: () => void): ModalHandle {
               info.onQuit();
             },
           },
-          'End round',
+          t ? 'Leave map' : 'End round',
         ),
       ),
-      h('p', { class: 'set-hint' }, 'Press Esc to resume. Ending early keeps the cash you ate.'),
+      h(
+        'p',
+        { class: 'set-hint' },
+        t ? 'Press Esc to resume. Leaving keeps your best size and %, but the map starts over next time.' : 'Press Esc to resume. Ending early keeps the cash you ate.',
+      ),
     ),
     { cls: 'pause-modal', onClose },
   );
@@ -403,6 +416,79 @@ export function showResults(r: RoundResult, onContinue: () => void): void {
     else if (r.bestRound) cashEl.appendChild(h('span', { class: 'new-badge' }, 'RECORD'));
   };
   requestAnimationFrame(tick);
+}
+
+export interface TourResult {
+  mapName: string;
+  cleared: boolean;
+  /** Seconds played. */
+  time: number;
+  percent: number;
+  level: number;
+  combo: number;
+  eaten: number;
+  biggestName: string;
+  biggestImg: string;
+  /** Stars on this map now, and how many of them this round earned. */
+  stars: number;
+  newStars: number;
+  /** Size goal (0-based) and par time in seconds: what the first and third star ask for. */
+  goal: number;
+  par: number;
+  bestLevel: boolean;
+  bestPercent: boolean;
+  bestTime: boolean;
+  /** Map this round opened in the Tour. */
+  opened: { name: string; icon: string } | null;
+  /** The next map, offered as the next stop once it is open. */
+  next: { name: string; icon: string } | null;
+}
+
+/** End of a casual Tour round: stars, records and the way on to the next map. */
+export function showTourResults(r: TourResult, onTour: () => void, onNext: (() => void) | null): void {
+  const stat = (label: string, value: string, isNew = false) =>
+    h('div', { class: 'res-stat' }, h('div', { class: 'res-label' }, label), h('div', { class: 'res-value' }, value, isNew ? h('span', { class: 'new-badge' }, 'NEW BEST') : null));
+  const stars = [0, 1, 2].map((i) => h('span', { class: i >= r.stars ? '' : i >= r.stars - r.newStars ? 'on new' : 'on' }, '★'));
+  let after = onTour;
+  const content = h(
+    'div',
+    { class: 'results' },
+    h('div', { class: 'res-title' }, r.cleared ? '🍽️ MAP CLEARED!' : '😋 NICE SNACKING!'),
+    h('div', { class: 'res-sub' }, `${r.mapName} · Casual Tour`),
+    h('div', { class: 'res-stars', role: 'img', 'aria-label': `${r.stars} of 3 stars` }, ...stars),
+    h('div', { class: 'res-small' }, `★ Reach size ${r.goal + 1} · ★ Clear the map · ★ Clear it within ${formatDuration(r.par)}`),
+    r.opened ? h('div', { class: 'res-bonus' }, `${r.opened.icon} ${r.opened.name} is open!`) : null,
+    h(
+      'div',
+      { class: 'res-grid' },
+      h('div', { class: 'res-stat big' }, h('div', { class: 'res-label' }, 'Biggest bite'), h('div', { class: 'res-biggest' }, r.biggestImg ? h('img', { src: r.biggestImg, alt: '' }) : null, r.biggestName || '—')),
+      stat(r.cleared ? 'Clear time' : 'Time played', formatDuration(r.time), r.bestTime),
+      stat('Map eaten', formatPercent(r.percent), r.bestPercent),
+      stat('Size reached', String(r.level + 1), r.bestLevel),
+      stat('Best combo', `×${r.combo}`),
+      stat('Objects', formatNumber(r.eaten)),
+    ),
+    onNext && r.next
+      ? h(
+          'div',
+          { class: 'modal-actions' },
+          h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Tour'),
+          h(
+            'button',
+            {
+              class: 'btn primary',
+              onclick: () => {
+                after = onNext;
+                m.close();
+              },
+            },
+            `Next: ${r.next.icon} ${r.next.name} ▶`,
+          ),
+        )
+      : h('button', { class: 'btn primary big', onclick: () => m.close() }, 'Continue'),
+  );
+  // Focus stays on the box, as on the round results: a late Space or gamepad A must not skip it.
+  const m = modal(content, { cls: 'results-modal', dismissable: false, onClose: () => after(), focusBox: true });
 }
 
 export function showOffline(seconds: number, credited: number, earned: number, capped: boolean): void {

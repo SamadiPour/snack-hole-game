@@ -7,6 +7,7 @@ import { generateMap } from '../src/core/mapgen';
 import { MapBuilder } from '../src/core/mapgen/builder';
 import { defaultSave, deserialize, migrate, serialize } from '../src/core/save';
 import { SpatialGrid } from '../src/core/spatial';
+import { tourRoundConfig } from '../src/core/tour';
 import { ALIVE, FALLING, GONE, MV_GRAPH, World, type WObj } from '../src/core/world';
 
 function tinyMap() {
@@ -208,6 +209,19 @@ describe('round end', () => {
     expect(w.reachable().levels).toBe(0);
     expect(w.snackedOut()).toBe(false);
     expect(new World(ladderMap(0, fitAt(20)), cfg(12, true)).snackedOut()).toBe(true);
+  });
+
+  it('grows a casual hole for free once nothing left can grow it, instead of ending the round', () => {
+    const w = new World(ladderMap(0, fitAt(5)), tourRoundConfig('suburb'));
+    for (let i = 0; i < 30 * 4; i++) w.step(1 / 30);
+    expect(w.running).toBe(true);
+    expect(w.main.level).toBeGreaterThanOrEqual(5);
+  });
+
+  it('gives a casual hole no free growth while what fits can still grow it', () => {
+    const w = new World(ladderMap(40, fitAt(1) * 0.98), tourRoundConfig('suburb'));
+    for (let i = 0; i < 30 * 4; i++) w.step(1 / 30);
+    expect(w.main.level).toBe(0);
   });
 
   it('finishes early with a time bonus once nothing reachable is left', () => {

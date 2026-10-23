@@ -47,6 +47,22 @@ export interface Stats {
   abilitiesUsed: number;
 }
 
+/** Casual Tour progress (core/tour.ts). Tour rounds book nothing else: no cash, Gulpedia, stats or trophies. */
+export interface TourSave {
+  /** The hub is in Tour mode: PLAY starts a Tour round and the panel lists the Tour maps. */
+  active: boolean;
+  /** Tour map PLAY starts; always an open one. */
+  selectedMap: MapId;
+  /** Maps opened in the Tour; the first is always open. */
+  maps: Record<MapId, boolean>;
+  /** Biggest size level reached on each map. */
+  bestLevel: Record<MapId, number>;
+  /** Best share of each map eaten. */
+  bestPct: Record<MapId, number>;
+  /** Fastest clear of each map in seconds; 0 until it is cleared. */
+  bestClear: Record<MapId, number>;
+}
+
 export interface SaveData {
   version: number;
   cash: number;
@@ -75,6 +91,8 @@ export interface SaveData {
   dmUpgrades: Record<DmUpgradeId, number>;
   skins: string[];
   skin: string;
+  /** Kept through Singularities: the Tour is apart from runs. */
+  tour: TourSave;
   gulpedia: Record<string, number>;
   achievements: string[];
   /** Misc one-shot UI flags (tabs seen, tutorial hints). */
@@ -114,6 +132,14 @@ export function defaultSave(now = Date.now()): SaveData {
     dmUpgrades: record(DM_UPGRADES.map((u) => u.id), 0),
     skins: ['classic'],
     skin: 'classic',
+    tour: {
+      active: false,
+      selectedMap: 'suburb',
+      maps: { ...record(MAPS.map((m) => m.id), false), suburb: true },
+      bestLevel: record(MAPS.map((m) => m.id), 0),
+      bestPct: record(MAPS.map((m) => m.id), 0),
+      bestClear: record(MAPS.map((m) => m.id), 0),
+    },
     gulpedia: {},
     achievements: [],
     flags: {},
@@ -222,6 +248,14 @@ function clampToGame(s: SaveData): void {
   // middle of MAPS gets the new map once it has passed that point.
   for (let i = MAPS.length - 2; i >= 0; i--) if (s.maps[MAPS[i + 1].id]) s.maps[MAPS[i].id] = true;
   if (!MAPS.some((m) => m.id === s.selectedMap) || s.maps[s.selectedMap] !== true) s.selectedMap = 'suburb';
+  const t = s.tour;
+  t.maps.suburb = true;
+  for (let i = MAPS.length - 2; i >= 0; i--) if (t.maps[MAPS[i + 1].id]) t.maps[MAPS[i].id] = true;
+  if (!MAPS.some((m) => m.id === t.selectedMap) || t.maps[t.selectedMap] !== true) t.selectedMap = 'suburb';
+  for (const m of MAPS) {
+    t.bestLevel[m.id] = level(t.bestLevel[m.id]);
+    t.bestPct[m.id] = Math.min(1, t.bestPct[m.id]);
+  }
 }
 
 /** Version migrations: each step upgrades from version n to n+1. */

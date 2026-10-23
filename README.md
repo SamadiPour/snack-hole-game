@@ -39,6 +39,7 @@ Gamepads work too: stick or d-pad steers, A / X / Y for abilities, Start pauses.
 - 7 procedural maps with traffic, animals and events; 124 prop types
 - Timed rounds with combos, golden props, landmarks and an early finish when you run out of snacks
 - Upgrades, helper holes, abilities, Singularity prestige with endless tiers, skins
+- Casual Tour: no timer and no shop, grow through every map at your own pace
 - Gulpedia collection and 42 trophies
 - Save export / import, offline earnings, installable and playable offline
 
