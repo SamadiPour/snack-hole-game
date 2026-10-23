@@ -254,6 +254,24 @@ export const MAP_SIZE_HEADROOM = 3;
  */
 export const MAP_SIZE_MIN_SPAN = 0.15;
 
+// ---------------------------------------------------------------- casual tour
+/**
+ * Casual Tour: the maps in order with the base hole (no upgrades, abilities, helpers or golden
+ * props), no timer and no cash. The first map starts at size 1 and every later one at
+ * `entryLevel`, so the hole never drops back to a speck. Reaching a map's size goal opens the next
+ * one. Props give XP without the map's `xpMul`, which only slows upgraded players. Once what is
+ * left cannot grow the hole, it grows a level every ROUND_END.checkEvery seconds until something
+ * can (World catch-up): no crumb hunt between size tiers, and every map can be cleared. `par` is
+ * the clear time in seconds for a map's third star: the casual player's median clear in
+ * `npm run sim:tour`, rounded up to 30 s, plus 30 s.
+ */
+export const TOUR = {
+  entryLevel: 10,
+  /** Built-in magnet (Magnet upgrade levels; fractions allowed): the base hole has no upgrades. */
+  magnetLevel: 0.5,
+  par: { suburb: 360, farm: 450, downtown: 270, harbor: 300, airport: 390, spaceport: 360, moon: 480 } as Record<MapId, number>,
+};
+
 // ---------------------------------------------------------------- prestige
 /**
  * Singularity. Dark Matter is based on lifetime cash: you have earned

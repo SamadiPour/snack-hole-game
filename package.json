@@ -11,6 +11,7 @@
     "itch": "tsc --noEmit && vite build --base=./ --outDir itch/build --emptyOutDir && rm itch/build/sw.js && rm -f itch/snack-hole.zip && cd itch/build && zip -qrX ../snack-hole.zip .",
     "test": "vitest run",
     "sim": "tsx scripts/sim.ts",
+    "sim:tour": "tsx scripts/tour-sim.ts",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import { ABILITIES, type AbilityId } from '../config/balance';
 import { OBJECT_TYPES } from '../config/objects';
-import { levelToEat } from '../core/economy';
+import { levelToEat, mapDef } from '../core/economy';
 import { formatCash, formatDuration, formatPercent } from '../core/format';
 import type { World } from '../core/world';
 import { h, setText, toggleClass } from './dom';
@@ -12,7 +12,10 @@ interface AbilityButton {
   label: HTMLDivElement;
 }
 
-/** In-round overlay: timer, size badge, cash, combo meter, ability buttons, floaters, banners. */
+/**
+ * In-round overlay: timer, size badge, cash, combo meter, ability buttons, floaters, banners. A
+ * casual Tour round has no timer or cash: the timer counts up and the cash pill shows the size goal.
+ */
 export class Hud {
   readonly root: HTMLDivElement;
   private timer: HTMLDivElement;
@@ -33,6 +36,7 @@ export class Hud {
   private hintTimer = 0;
   private pool: HTMLDivElement[] = [];
   private shownCash = 0;
+  private casual = false;
   onAbility: ((id: AbilityId) => void) | null = null;
   onPause: (() => void) | null = null;
 
@@ -78,6 +82,7 @@ export class Hud {
 
   setup(world: World): void {
     this.shownCash = 0;
+    this.casual = world.cfg.casual;
     this.abilityBar.innerHTML = '';
     this.abilities = [];
     for (const a of ABILITIES) {
@@ -118,8 +123,8 @@ export class Hud {
       if (this.hintTimer <= 0) this.hideHint();
     }
     const t = world.timeLeft;
-    setText(this.timer, formatDuration(Math.ceil(t)));
-    toggleClass(this.timer, 'urgent', t <= 10 && world.running);
+    setText(this.timer, this.casual ? formatDuration(world.endedAt || world.time) : formatDuration(Math.ceil(t)));
+    toggleClass(this.timer, 'urgent', !this.casual && t <= 10 && world.running);
     const lvl = world.main.level;
     setText(this.sizeNum, String(lvl + 1));
     const p = Math.round(world.levelProgress * 100);
@@ -130,10 +135,15 @@ export class Hud {
       next ? `Next: ${OBJECT_TYPES[next.t].name} @ ${levelToEat(next.f) + 1}` : world.atMaxSize ? 'Max size! Eat everything!' : 'Eat everything!',
     );
 
-    // Count-up cash display.
-    this.shownCash += (world.cash - this.shownCash) * Math.min(1, dt * 10);
-    if (world.cash - this.shownCash < 0.5) this.shownCash = world.cash;
-    setText(this.cash, formatCash(this.shownCash));
+    if (this.casual) {
+      const goal = mapDef(world.cfg.mapId).goal;
+      setText(this.cash, `${lvl >= goal ? '✅' : '🎯'} Size ${goal + 1}`);
+    } else {
+      // Count-up cash display.
+      this.shownCash += (world.cash - this.shownCash) * Math.min(1, dt * 10);
+      if (world.cash - this.shownCash < 0.5) this.shownCash = world.cash;
+      setText(this.cash, formatCash(this.shownCash));
+    }
     setText(this.pct, `${formatPercent(world.percentEaten)} eaten`);
 
     const c = world.combo;
@@ -141,7 +151,7 @@ export class Hud {
     if (c >= 3) {
       setText(this.comboText, `COMBO ×${c}`);
       const capped = world.comboMultiplier >= world.cfg.comboCap - 1e-9;
-      setText(this.comboMult, `cash ×${world.comboMultiplier.toFixed(2)}${capped ? ' · MAX' : ''}`);
+      setText(this.comboMult, this.casual ? '' : `cash ×${world.comboMultiplier.toFixed(2)}${capped ? ' · MAX' : ''}`);
       this.comboBar.style.transform = `scaleX(${Math.max(0, world.comboTimer / world.cfg.comboWindow)})`;
       toggleClass(this.combo, 'hot', c >= 25);
     }

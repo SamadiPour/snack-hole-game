@@ -6,6 +6,7 @@ import {
   MAP_COMPLETE_BONUS,
   PRESTIGE,
   SKINS,
+  TOUR,
   UPGRADES,
   type AbilityId,
   type DmUpgradeId,
@@ -47,8 +48,9 @@ import {
   upgradeEffectText,
   type SingularityPreview,
 } from '../core/economy';
-import { formatCash, formatNumber, formatPercent, formatRate } from '../core/format';
+import { formatCash, formatDuration, formatNumber, formatPercent, formatRate } from '../core/format';
 import type { SaveData } from '../core/save';
+import { tourComplete, tourLockReason, tourStars, tourStartLevel } from '../core/tour';
 import { thumbInto } from '../render/thumbs';
 import { card, lockedCard, section, type Card } from './cards';
 import { h, setText } from './dom';
@@ -60,6 +62,8 @@ export interface HubApi {
   buyHelperLevel(): void;
   buyAbility(id: AbilityId): void;
   selectMap(id: MapId): void;
+  selectTourMap(id: MapId): void;
+  setTourMode(on: boolean): void;
   buyDm(id: DmUpgradeId): void;
   prestige(): void;
   buySkin(id: string): void;
@@ -248,6 +252,53 @@ function mapsTab(api: HubApi, cards: Card[]): HTMLElement {
     cards.push(c);
     root.appendChild(c.el);
   });
+  return root;
+}
+
+/** Filled and empty stars, out of 3. */
+export function starText(n: number): string {
+  return '★'.repeat(n) + '☆'.repeat(3 - n);
+}
+
+/** The hub panel in Tour mode: every Tour map with its stars and records, in place of the shop tabs. */
+export function tourPanel(api: HubApi, cards: Card[]): HTMLElement {
+  const s = api.save;
+  const t = s.tour;
+  const root = h('div', { class: 'tab-body' });
+  root.appendChild(
+    section(
+      tourComplete(s) ? 'Casual Tour 🏆' : 'Casual Tour',
+      'No timer, no shop, no cash: start small and grow on each map at your own pace. Reach the size goal to open the next map. Stars: reach the goal, clear the map, clear it within par.',
+    ),
+  );
+  for (const m of MAPS) {
+    if (!t.maps[m.id]) {
+      root.appendChild(lockedCard(m.icon, m.name, `${tourLockReason(s, m.id)}.`));
+      continue;
+    }
+    const c = card({
+      icon: m.icon,
+      title: m.name,
+      cls: t.selectedMap === m.id ? 'selected' : '',
+      desc: `${m.blurb} You start at size ${tourStartLevel(m.id) + 1}.`,
+      level: () => starText(tourStars(s, m.id)),
+      effect: () => {
+        const goal = `Goal size ${m.goal + 1} · par ${formatDuration(TOUR.par[m.id])}`;
+        if (t.bestPct[m.id] <= 0) return goal;
+        const clear = t.bestClear[m.id] > 0 ? `, cleared in ${formatDuration(t.bestClear[m.id])}` : '';
+        return `${goal} · best size ${t.bestLevel[m.id] + 1}, ${formatPercent(t.bestPct[m.id])}${clear}`;
+      },
+      button: {
+        label: () => 'Select',
+        cost: () => '',
+        can: () => true,
+        onClick: () => api.selectTourMap(m.id),
+        doneText: () => (t.selectedMap === m.id ? 'SELECTED' : null),
+      },
+    });
+    cards.push(c);
+    root.appendChild(c.el);
+  }
   return root;
 }
 

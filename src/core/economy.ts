@@ -379,6 +379,7 @@ export function applyPrestige(save: SaveData, now = Date.now()): SaveData {
     map100: { ...save.map100 },
     skins: [...save.skins],
     skin: save.skin,
+    tour: structuredClone(save.tour),
     gulpedia: { ...save.gulpedia },
     achievements: [...save.achievements],
     flags: { ...save.flags },
@@ -431,6 +432,8 @@ export interface AbilityConfig {
 
 export interface RoundConfig {
   mapId: MapId;
+  /** Casual Tour round (core/tour.ts): no timer, and the hole grows to reach what is left instead of snacking out. */
+  casual: boolean;
   /** The map was cleared (100%) in an earlier round. */
   mapCleared: boolean;
   mapMul: number;
@@ -486,6 +489,7 @@ export function buildRoundConfig(save: SaveData, mapId: MapId = save.selectedMap
   }
   return {
     mapId,
+    casual: false,
     mapCleared: save.map100[mapId],
     mapMul: mapDef(mapId).valueMul * tierCostMul(save.tier),
     roundTime: roundTimeFor(save),

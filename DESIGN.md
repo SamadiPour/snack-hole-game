@@ -192,6 +192,52 @@ more sizes off than they used to, balanced by Starting Size levels 46–50 (`bal
 a hole that maxed the old 45 levels no longer starts close to their goals. Every map tracks
 its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
 
+## Casual Tour
+
+A relaxed mode behind the Classic / Tour switch above PLAY, there from the first launch. In Tour
+mode the hub shows a star count instead of cash, a ‹ › picker for the open Tour maps, and the Tour
+map list in place of the shop; PLAY starts the selected Tour map. It uses the base hole, with
+no upgrades, abilities, helpers or golden props, and has no timer, cash or shop. Props give XP
+without the map's `xpMul`, which is there to slow upgraded players (`tourRoundConfig` in
+`core/tour.ts`, numbers in `TOUR`). A light built-in magnet (half a Magnet level, reaching 21% of
+the radius past the rim) forgives loose steering: it cuts clear times about 5% in the sim (a full
+level, about 9%), and since its reach and pull follow the radius it adds less at big sizes
+(+8–20% swallows per second) than at small ones (+15–55%), with no measurable sim cost.
+
+- The maps come in the main game's order. The first starts at size 1 and every later one at size 11
+  (`TOUR.entryLevel`), so the hole never drops back to a speck. Carrying the size over from the map
+  before was tried: later maps started 95–100% edible and cleared in about 2 minutes.
+- Reaching a map's size goal opens the next map at once (saved mid-round) and selects it for the
+  next PLAY. A round runs until the map is cleared or the player leaves from the pause menu.
+  Leaving keeps the best size and %, but the map starts over next time: there is no mid-map save.
+- **Catch-up growth**: every 0.5 s, once what still fits cannot pay for another size level
+  (`reachable().levels === 0`), the hole grows one level for free (`catchUp` event). Without it
+  the base hole snacked out on Harbor and later maps with 46–89% eaten, or spent 4–6 minutes on
+  one size vacuuming crumbs.
+- Three stars per map: reach the goal, clear the map, clear it within par (`TOUR.par`: the casual
+  player's median clear, rounded up to 30 s, plus 30 s).
+- Reaching the Moon Base goal completes the Tour, and earning the last of the 21 stars makes it
+  perfect: each gets a celebration screen (fanfare, flash) after that round's results.
+- Tour rounds book nothing into the main game (no cash, stats, Gulpedia, trophies or map
+  progress). Progress lives in `save.tour` and survives Singularities. Since nothing reaches the
+  Gulpedia, the first landmark of each kind gets the full slow-motion moment once per round.
+
+`npm run sim:tour` plays every Tour map with the sim's player models, seeds 1–3, median:
+
+| Map | Start size | Goal | Goal (`--human`) | Clear (`--human`) | Clear (`--good`) | Par |
+|---|---|---|---|---|---|---|
+| Sunny Suburb | 1 | 17 | 2:13 | 5:17 | 4:13 | 6:00 |
+| Happy Farm | 11 | 19 | 2:09 | 7:00 | 4:30 | 7:30 |
+| Downtown | 11 | 26 | 2:37 | 3:42 | 3:07 | 4:30 |
+| Harbor | 11 | 24 | 2:32 | 4:03 | 3:17 | 5:00 |
+| Airport | 11 | 28 | 5:12 | 5:40 | 4:48 | 6:30 |
+| Spaceport | 11 | 29 | 4:53 | 5:11 | 4:56 | 6:00 |
+| Moon Base | 11 | 25 | 6:09 | 7:10 | 5:53 | 8:00 |
+| Whole Tour | | | 25:46 | 38:02 | 30:45 | |
+
+The longest stretch without eating anything is 8 s (`--human`). Like the main sim, these times are
+a lower bound for real players.
+
 ## Singularity (prestige)
 
 - Available once Downtown is unlocked in the run.
@@ -320,6 +366,7 @@ src/
     size.ts        hole size formulas (radius, XP per level, what fits); mapgen uses them too
     save.ts        versioned save, migration, defaults
     round.ts       settleRound: books a finished round into the save (game and sim share it)
+    tour.ts        casual Tour: round config, map chain, stars, settleTour
     world.ts       round simulation: holes, swallowing, movers, combo, abilities, early finish
     roundEvents.ts rush hour, UFO fly-by and stampede (staged off-stage, run one at a time)
     traffic.ts     road vehicles slow for the vehicle ahead and take turns at junctions
@@ -352,7 +399,7 @@ src/
 tests/         vitest: format, economy, shop (helpers, abilities, trophies, offline edges), save
                validation, round settlement, world/mapgen, pinned map layouts, events, prop
                builders, map size ladders
-scripts/       sim.ts (balance), smoke.mjs / shots.mjs / ui-shots.mjs (Playwright screenshots),
+scripts/       sim.ts (balance), tour-sim.ts (casual Tour pacing), smoke.mjs / shots.mjs / ui-shots.mjs (Playwright screenshots),
                profile.mjs (frame timings), devServer.mjs (each script starts its own Vite
                unless given a URL), floorplan.ts (top-down map plans, `--props` for footprints)
 ```

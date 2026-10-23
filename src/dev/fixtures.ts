@@ -108,6 +108,21 @@ const FIXTURES: Record<string, (s: SaveData) => void> = {
     checkAchievements(s);
     s.skin = 'quasar';
   },
+  /**
+   * Casual Tour with every map open: each goal before Moon Base reached (one star each, nothing
+   * cleared), Moon Base open but unplayed and selected, so its goal finishes the Tour. Classic is
+   * a new save.
+   */
+  tour: (s) => {
+    const t = s.tour;
+    t.active = true;
+    for (const m of MAPS) t.maps[m.id] = true;
+    for (const m of MAPS.slice(0, -1)) {
+      t.bestLevel[m.id] = m.goal;
+      t.bestPct[m.id] = 0.6;
+    }
+    t.selectedMap = MAPS[MAPS.length - 1].id;
+  },
 };
 
 export function fixtureSave(name: string): SaveData {

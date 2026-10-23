@@ -19,6 +19,8 @@ export interface RoundSummary {
   biggest: { t: number; f: number } | null;
   /** Props swallowed per object type index. */
   eatenByType: ReadonlyMap<number, number>;
+  /** Seconds the round ran before it stopped. */
+  time: number;
 }
 
 /** What settling a round changed, for the results screen. */
@@ -51,6 +53,7 @@ export function summarizeRound(w: World): RoundSummary {
     percentEaten: w.percentEaten,
     biggest: w.biggest,
     eatenByType: w.eatenByType,
+    time: w.endedAt || w.time,
   };
 }
 

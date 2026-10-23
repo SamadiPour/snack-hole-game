@@ -13,6 +13,7 @@ const round = (over: Partial<RoundSummary> = {}): RoundSummary => ({
   percentEaten: 0.1,
   biggest: null,
   eatenByType: new Map(),
+  time: 60,
   ...over,
 });
 
