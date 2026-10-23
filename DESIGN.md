@@ -211,9 +211,14 @@ level, about 9%), and since its reach and pull follow the radius it adds less at
   next PLAY. A round runs until the map is cleared or the player leaves from the pause menu.
   Leaving keeps the best size and %, but the map starts over next time: there is no mid-map save.
 - **Catch-up growth**: every 0.5 s, once what still fits cannot pay for another size level
-  (`reachable().levels === 0`), the hole grows one level for free (`catchUp` event). Without it
-  the base hole snacked out on Harbor and later maps with 46–89% eaten, or spent 4–6 minutes on
-  one size vacuuming crumbs.
+  (`reachable().levels === 0`), the hole grows one level for free (`catchUp` event), but only
+  while a map prop is still too big to fit and the props its current size brought within reach
+  are eaten. Each new tier opens once the one before it is eaten, empty stretches of the size
+  ladder pass at a level per 0.5 s, and the hole stops growing once everything left fits.
+  Without catch-up the base hole snacked out on Harbor and later maps with 46–89% eaten, or spent
+  4–6 minutes on one size vacuuming crumbs. Growing until something could pay for a level was
+  tried: most maps reached their max size (3 levels past eating everything) with 15–30% left to
+  eat, and Airport and Spaceport grew 11 sizes in 6 s with about 40% eaten.
 - Three stars per map: reach the goal, clear the map, clear it within par (`TOUR.par`: the casual
   player's median clear, rounded up to 30 s, plus 30 s).
 - Reaching the Moon Base goal completes the Tour, and earning the last of the 21 stars makes it
@@ -226,14 +231,14 @@ level, about 9%), and since its reach and pull follow the radius it adds less at
 
 | Map | Start size | Goal | Goal (`--human`) | Clear (`--human`) | Clear (`--good`) | Par |
 |---|---|---|---|---|---|---|
-| Sunny Suburb | 1 | 17 | 2:13 | 5:17 | 4:13 | 6:00 |
-| Happy Farm | 11 | 19 | 2:09 | 7:00 | 4:30 | 7:30 |
-| Downtown | 11 | 26 | 2:37 | 3:42 | 3:07 | 4:30 |
-| Harbor | 11 | 24 | 2:32 | 4:03 | 3:17 | 5:00 |
-| Airport | 11 | 28 | 5:12 | 5:40 | 4:48 | 6:30 |
-| Spaceport | 11 | 29 | 4:53 | 5:11 | 4:56 | 6:00 |
-| Moon Base | 11 | 25 | 6:09 | 7:10 | 5:53 | 8:00 |
-| Whole Tour | | | 25:46 | 38:02 | 30:45 | |
+| Sunny Suburb | 1 | 17 | 2:13 | 6:06 | 4:55 | 7:00 |
+| Happy Farm | 11 | 19 | 2:09 | 7:35 | 6:44 | 8:30 |
+| Downtown | 11 | 26 | 2:37 | 4:06 | 3:30 | 5:00 |
+| Harbor | 11 | 24 | 2:32 | 4:33 | 3:53 | 5:30 |
+| Airport | 11 | 28 | 6:17 | 6:59 | 5:49 | 7:30 |
+| Spaceport | 11 | 29 | 5:39 | 5:55 | 5:46 | 6:30 |
+| Moon Base | 11 | 25 | 6:58 | 8:14 | 6:39 | 9:00 |
+| Whole Tour | | | 28:26 | 43:28 | 37:15 | |
 
 The longest stretch without eating anything is 8 s (`--human`). Like the main sim, these times are
 a lower bound for real players.

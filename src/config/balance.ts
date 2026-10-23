@@ -260,8 +260,9 @@ export const MAP_SIZE_MIN_SPAN = 0.15;
  * props), no timer and no cash. The first map starts at size 1 and every later one at
  * `entryLevel`, so the hole never drops back to a speck. Reaching a map's size goal opens the next
  * one. Props give XP without the map's `xpMul`, which only slows upgraded players. Once what is
- * left cannot grow the hole, it grows a level every ROUND_END.checkEvery seconds until something
- * can (World catch-up): no crumb hunt between size tiers, and every map can be cleared. `par` is
+ * left cannot grow the hole and the props its size brought within reach are eaten, it grows a
+ * level every ROUND_END.checkEvery seconds while a prop is still too big to fit (World catch-up):
+ * no crumb hunt between size tiers, and every map can be cleared. `par` is
  * the clear time in seconds for a map's third star: the casual player's median clear in
  * `npm run sim:tour`, rounded up to 30 s, plus 30 s.
  */
@@ -269,7 +270,7 @@ export const TOUR = {
   entryLevel: 10,
   /** Built-in magnet (Magnet upgrade levels; fractions allowed): the base hole has no upgrades. */
   magnetLevel: 0.5,
-  par: { suburb: 360, farm: 450, downtown: 270, harbor: 300, airport: 390, spaceport: 360, moon: 480 } as Record<MapId, number>,
+  par: { suburb: 420, farm: 510, downtown: 300, harbor: 330, airport: 450, spaceport: 390, moon: 540 } as Record<MapId, number>,
 };
 
 // ---------------------------------------------------------------- prestige

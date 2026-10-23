@@ -885,6 +885,25 @@ export class World {
     h.baseR = radiusForLevel(h.level);
   }
 
+  /**
+   * A casual round is due a free level when what fits cannot pay for one, a map prop is still too
+   * big to fit, and nothing the current size brought within reach is left: the player eats each new
+   * tier before the next one opens, and once everything fits the hole stops growing. Event props
+   * come and go, so they are left out.
+   */
+  private catchUpDue(): boolean {
+    if (this.atMaxSize || this.reachable().levels > 0) return false;
+    const fit = SIZE.fit * radiusForLevel(this.main.level);
+    const fitBefore = SIZE.fit * radiusForLevel(this.main.level - 1);
+    let tooBig = false;
+    for (const o of this.objects) {
+      if (o.state !== ALIVE || o.event) continue;
+      if (o.f > fit) tooBig = true;
+      else if (o.f > fitBefore) return false;
+    }
+    return tooBig;
+  }
+
   /** One free size level for a casual round where nothing left can grow the hole. */
   private catchUp(): void {
     const h = this.main;
@@ -935,7 +954,7 @@ export class World {
           if (this.cfg.casual) {
             // Casual rounds have no timer to end them: once what is left cannot grow the hole, it
             // grows for free, so the bigger props come within reach instead of a long crumb hunt.
-            if (!this.atMaxSize && this.reachable().levels === 0) this.catchUp();
+            if (this.catchUpDue()) this.catchUp();
           } else if (!this.roundEvents.current && this.snackedOut() && !this.roundEvents.hurry()) {
             // A random event still to come brings new snacks: hurry() starts it instead of ending.
             snackedOut = true;

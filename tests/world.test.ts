@@ -218,6 +218,27 @@ describe('round end', () => {
     expect(w.main.level).toBeGreaterThanOrEqual(5);
   });
 
+  it('gives a casual hole no free growth once everything left fits', () => {
+    const w = new World(ladderMap(3, fitAt(9) * 0.9), tourRoundConfig('farm'));
+    expect(w.reachable().levels).toBe(0);
+    for (let i = 0; i < 30 * 4; i++) w.step(1 / 30);
+    expect(w.main.level).toBe(10);
+  });
+
+  it('opens the next tier for a casual hole only once the tier its size brought within reach is eaten', () => {
+    const b = new MapBuilder('suburb', 200, 1);
+    const cone = footprintOf(OBJECT_TYPES[typeId('cone')]);
+    b.put('cone', -30, -30, 0, { force: true, scale: (fitAt(10) * 0.98) / cone });
+    b.put('cone', -55, -30, 0, { force: true, scale: (fitAt(12) * 0.98) / cone });
+    const w = new World(b.build('#000', '#000', theme), tourRoundConfig('farm'));
+    expect(w.reachable().levels).toBe(0);
+    for (let i = 0; i < 30 * 4; i++) w.step(1 / 30);
+    expect(w.main.level).toBe(10);
+    w.objects[0].state = GONE;
+    for (let i = 0; i < 30 * 4; i++) w.step(1 / 30);
+    expect(w.main.level).toBe(12);
+  });
+
   it('gives a casual hole no free growth while what fits can still grow it', () => {
     const w = new World(ladderMap(40, fitAt(1) * 0.98), tourRoundConfig('suburb'));
     for (let i = 0; i < 30 * 4; i++) w.step(1 / 30);
