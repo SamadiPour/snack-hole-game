@@ -50,7 +50,7 @@ import {
 } from '../core/economy';
 import { formatCash, formatDuration, formatNumber, formatPercent, formatRate } from '../core/format';
 import type { SaveData } from '../core/save';
-import { tourLockReason, tourStars, tourStartLevel } from '../core/tour';
+import { tourComplete, tourLockReason, tourStars, tourStartLevel } from '../core/tour';
 import { thumbInto } from '../render/thumbs';
 import { card, lockedCard, section, type Card } from './cards';
 import { h, setText } from './dom';
@@ -267,7 +267,7 @@ export function tourPanel(api: HubApi, cards: Card[]): HTMLElement {
   const root = h('div', { class: 'tab-body' });
   root.appendChild(
     section(
-      'Casual Tour',
+      tourComplete(s) ? 'Casual Tour 🏆' : 'Casual Tour',
       'No timer, no shop, no cash: start small and grow on each map at your own pace. Reach the size goal to open the next map. Stars: reach the goal, clear the map, clear it within par.',
     ),
   );

@@ -1,4 +1,4 @@
-import { ABILITIES, AUTOSAVE_SECONDS, SKINS, type AbilityId, type DmUpgradeId, type MapId, type UpgradeId } from './config/balance';
+import { ABILITIES, AUTOSAVE_SECONDS, MAPS, SKINS, type AbilityId, type DmUpgradeId, type MapId, type UpgradeId } from './config/balance';
 import { Audio } from './audio/audio';
 import { checkAchievements } from './core/achievements';
 import { Bot } from './core/bot';
@@ -7,7 +7,7 @@ import { setScientific } from './core/format';
 import { generateMap } from './core/mapgen';
 import { settleRound, summarizeRound } from './core/round';
 import { encodeSaveText, serialize, type SaveData } from './core/save';
-import { inTourMode, nextTourMap, openNextTourMap, settleTour, tourRoundConfig } from './core/tour';
+import { nextTourMap, openNextTourMap, settleTour, tourRoundConfig } from './core/tour';
 import { World } from './core/world';
 import { devFlags } from './dev/flags';
 import { SaveStore } from './persistence';
@@ -199,13 +199,13 @@ export class Game implements HubApi {
 
   /** The map PLAY starts: the selected Tour map in Tour mode, else the selected map. */
   private hubMap(): MapId {
-    return inTourMode(this.save) ? this.save.tour.selectedMap : this.save.selectedMap;
+    return this.save.tour.active ? this.save.tour.selectedMap : this.save.selectedMap;
   }
 
   /** Attract mode behind the hub: a bot-driven hole roams the map PLAY starts. */
   private startDemo(): void {
     const mapId = this.hubMap();
-    const cfg = inTourMode(this.save) ? tourRoundConfig(mapId) : eco.buildRoundConfig(this.save, mapId);
+    const cfg = this.save.tour.active ? tourRoundConfig(mapId) : eco.buildRoundConfig(this.save, mapId);
     cfg.startLevel = Math.max(5, cfg.startLevel + 3);
     cfg.helpers = 0;
     cfg.cashMult = 0;
@@ -217,7 +217,7 @@ export class Game implements HubApi {
 
   play(): void {
     if (this.state !== 'hub' || anyModalOpen()) return;
-    if (inTourMode(this.save)) this.startTour(this.save.tour.selectedMap);
+    if (this.save.tour.active) this.startTour(this.save.tour.selectedMap);
     else this.begin(() => eco.buildRoundConfig(this.save));
   }
 
@@ -251,14 +251,17 @@ export class Game implements HubApi {
     this.fx.newRound();
     this.tourOpened = null;
     const map = eco.mapDef(cfg.mapId);
+    // The Tour can be a player's first round ever: it gets the steering tip then.
+    const firstEver = this.save.stats.rounds === 0 && MAPS.every((m) => this.save.tour.bestPct[m.id] === 0);
+    const steer = matchMedia('(pointer: coarse)').matches ? '👆 Drag anywhere to steer the hole' : '🖱️ Point where you want to go (or use WASD / arrows)';
     if (cfg.casual) {
       const next = nextTourMap(cfg.mapId);
       this.hud.banner('GO!', `${map.name} · Casual Tour`);
-      this.hud.hint(next && !this.save.tour.maps[next.id] ? `🎯 Reach size ${map.goal + 1} to open ${next.name}` : '🍽️ No timer: eat it all at your own pace', 6);
-    } else if (this.save.stats.rounds === 0) {
+      if (firstEver) this.hud.hint(steer, 9);
+      else this.hud.hint(next && !this.save.tour.maps[next.id] ? `🎯 Reach size ${map.goal + 1} to open ${next.name}` : '🍽️ No timer: eat it all at your own pace', 6);
+    } else if (firstEver) {
       this.hud.banner('EAT!', 'Swallow anything smaller than the hole');
-      const touch = matchMedia('(pointer: coarse)').matches;
-      this.hud.hint(touch ? '👆 Drag anywhere to steer the hole' : '🖱️ Point where you want to go (or use WASD / arrows)', 9);
+      this.hud.hint(steer, 9);
     } else {
       this.hud.banner('GO!', map.name);
       if (this.save.stats.rounds === 1) this.hud.hint('Bigger hole = bigger snacks. Keep eating to grow!', 5);
@@ -323,8 +326,10 @@ export class Game implements HubApi {
       const r = settleTour(this.save, summarizeRound(w));
       this.persist();
       const next = nextTourMap(w.cfg.mapId);
-      const onNext = next && this.save.tour.maps[next.id] ? () => this.startTour(next.id) : null;
-      this.fx.showTourResults(w, r, this.tourOpened ?? r.opened, () => this.enterHub(), onNext);
+      // Finishing the Tour (or its last star) gets its own celebration after the results.
+      const then = (go: () => void) => (r.finished || r.perfect ? () => this.fx.tourComplete(r.perfect, go) : go);
+      const onNext = next && this.save.tour.maps[next.id] ? then(() => this.startTour(next.id)) : null;
+      this.fx.showTourResults(w, r, this.tourOpened ?? r.opened, then(() => this.enterHub()), onNext);
       return;
     }
     const r = settleRound(this.save, summarizeRound(w));

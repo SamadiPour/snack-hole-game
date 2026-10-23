@@ -1,16 +1,16 @@
-import { SIZE, TOUR, type MapId } from './config/balance';
+import { MAPS, SIZE, TOUR, type MapId } from './config/balance';
 import { OBJECT_TYPES } from './config/objects';
 import type { Audio } from './audio/audio';
 import * as eco from './core/economy';
 import { formatCash } from './core/format';
 import type { RoundSettlement } from './core/round';
 import type { SaveData } from './core/save';
-import { nextTourMap, type TourSettlement } from './core/tour';
+import { nextTourMap, tourStarTotal, type TourSettlement } from './core/tour';
 import type { EventId, World, WObj } from './core/world';
 import { reducedMotion } from './render/motion';
 import type { GameRenderer } from './render/scene';
 import { cachedThumb, thumbFor } from './render/thumbs';
-import { showResults, showTourResults } from './ui/dialogs';
+import { showResults, showTourComplete, showTourResults } from './ui/dialogs';
 import { h } from './ui/dom';
 import type { Hud } from './ui/hud';
 import { toast } from './ui/toast';
@@ -131,6 +131,18 @@ export class RoundFeedback {
       },
       onTour,
       onNext,
+    );
+  }
+
+  /** The celebration for finishing the Tour (`perfect`: for earning every star). */
+  tourComplete(perfect: boolean, onClose: () => void): void {
+    const t = this.d.save().tour;
+    this.d.audio.fanfare(true);
+    this.flash();
+    this.shake(1);
+    showTourComplete(
+      { perfect, stars: tourStarTotal(this.d.save()), maxStars: MAPS.length * 3, cleared: MAPS.filter((m) => t.bestClear[m.id] > 0).length, maps: MAPS.length },
+      onClose,
     );
   }
 

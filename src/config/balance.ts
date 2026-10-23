@@ -267,7 +267,9 @@ export const MAP_SIZE_MIN_SPAN = 0.15;
  */
 export const TOUR = {
   entryLevel: 10,
-  par: { suburb: 390, farm: 480, downtown: 300, harbor: 300, airport: 420, spaceport: 360, moon: 480 } as Record<MapId, number>,
+  /** Built-in magnet (Magnet upgrade levels; fractions allowed): the base hole has no upgrades. */
+  magnetLevel: 0.5,
+  par: { suburb: 360, farm: 450, downtown: 270, harbor: 300, airport: 390, spaceport: 360, moon: 480 } as Record<MapId, number>,
 };
 
 // ---------------------------------------------------------------- prestige

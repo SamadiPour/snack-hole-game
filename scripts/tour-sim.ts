@@ -5,6 +5,7 @@
  *   npm run sim:tour                      # casual player (as sim.ts --human), seeds 1-3
  *   npm run sim:tour -- --good --seeds 1-5
  *   npm run sim:tour -- --map airport
+ *   npm run sim:tour -- --magnet 1        # try another built-in magnet level (TOUR.magnetLevel)
  */
 import { MAPS, TOUR, type MapId } from '../src/config/balance';
 import { Bot } from '../src/core/bot';
@@ -24,6 +25,7 @@ const GOOD = args.includes('--good');
 const [s0, s1] = (arg('--seeds') ?? '1-3').split('-').map(Number);
 const seeds = Array.from({ length: (s1 ?? s0) - s0 + 1 }, (_, i) => s0 + i);
 const only = arg('--map') as MapId | undefined;
+const magnet = arg('--magnet');
 const DT = 1 / 20;
 /** Stop a map that has not been cleared after this long. */
 const CAP = 1800;
@@ -46,6 +48,7 @@ interface MapRun {
 
 function playMap(id: MapId, seed: number): MapRun {
   const cfg = tourRoundConfig(id);
+  if (magnet !== undefined) cfg.magnetLevel = Number(magnet);
   const w = new World(generateMap(id), cfg, { seed });
   const bot = new Bot(profile.bot, { cluster: profile.cluster, rng: new Rng(seed * 7919) });
   const goal = mapDef(id).goal;
@@ -77,7 +80,7 @@ const median = (xs: number[]) => {
 };
 const time = (s: number) => (isNaN(s) ? '-' : formatDuration(Math.round(s)));
 
-console.log(`Tour, ${GOOD ? 'good' : 'casual'} player, seeds ${seeds.join(',')}: median (min-max)`);
+console.log(`Tour, ${GOOD ? 'good' : 'casual'} player, magnet ${magnet ?? TOUR.magnetLevel}, seeds ${seeds.join(',')}: median (min-max)`);
 let goals = 0;
 let clears = 0;
 for (const m of MAPS) {

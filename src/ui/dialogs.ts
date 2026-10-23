@@ -491,6 +491,28 @@ export function showTourResults(r: TourResult, onTour: () => void, onNext: (() =
   const m = modal(content, { cls: 'results-modal', dismissable: false, onClose: () => after(), focusBox: true });
 }
 
+/** The Tour's finish line: every map's goal reached, or every star earned. */
+export function showTourComplete(r: { perfect: boolean; stars: number; maxStars: number; cleared: number; maps: number }, onClose: () => void): void {
+  const stat = (label: string, value: string) => h('div', { class: 'res-stat' }, h('div', { class: 'res-label' }, label), h('div', { class: 'res-value' }, value));
+  const m = modal(
+    h(
+      'div',
+      { class: 'results' },
+      h('div', { class: 'offline-icon' }, r.perfect ? '🌟' : '🏆'),
+      h('div', { class: 'res-title' }, r.perfect ? 'PERFECT TOUR!' : 'TOUR COMPLETE!'),
+      h(
+        'p',
+        { class: 'modal-text' },
+        r.perfect ? 'Every star on every map. There is nothing left to swallow.' : 'From a speck in Sunny Suburb to swallowing the Moon Base.',
+      ),
+      h('div', { class: 'res-grid' }, stat('Stars', `★ ${r.stars} of ${r.maxStars}`), stat('Maps cleared', `${r.cleared} of ${r.maps}`)),
+      r.perfect ? null : h('div', { class: 'res-hint' }, 'Clear every map within par for all the stars.'),
+      h('button', { class: 'btn primary big', onclick: () => m.close() }, 'Continue'),
+    ),
+    { cls: 'results-modal', dismissable: false, onClose, focusBox: true },
+  );
+}
+
 export function showOffline(seconds: number, credited: number, earned: number, capped: boolean): void {
   const m = modal(
     h(

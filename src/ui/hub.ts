@@ -2,7 +2,7 @@ import { MAPS, TOUR } from '../config/balance';
 import { mapDef, mapMaxLevel, roundTimeFor, startLevel } from '../core/economy';
 import { formatCash, formatDuration, formatNumber, formatPercent } from '../core/format';
 import type { SaveData } from '../core/save';
-import { inTourMode, tourStarTotal, tourStars, tourStartLevel, tourUnlocked } from '../core/tour';
+import { tourStarTotal, tourStars, tourStartLevel } from '../core/tour';
 import type { Card } from './cards';
 import { h, setText, toggleClass } from './dom';
 import { TABS, renderTab, starText, tourPanel, type HubApi, type TabId } from './tabs';
@@ -56,7 +56,7 @@ export class Hub {
     this.content.addEventListener('click', (e) => (this.pressed = e.target instanceof Element ? e.target : null), true);
     this.classicBtn = h('button', { class: 'mode-btn', onclick: () => api.setTourMode(false) }, 'Classic');
     this.tourBtn = h('button', { class: 'mode-btn', onclick: () => api.setTourMode(true) }, '🧭 Tour');
-    this.modeSwitch = h('div', { class: 'mode-switch hidden', role: 'group', 'aria-label': 'Game mode' }, this.classicBtn, this.tourBtn);
+    this.modeSwitch = h('div', { class: 'mode-switch', role: 'group', 'aria-label': 'Game mode' }, this.classicBtn, this.tourBtn);
     this.prevMap = h('button', { class: 'icon-btn map-step', 'aria-label': 'Previous Tour map', onclick: () => this.stepTourMap(-1) }, '‹');
     this.nextMap = h('button', { class: 'icon-btn map-step', 'aria-label': 'Next Tour map', onclick: () => this.stepTourMap(1) }, '›');
     this.playMapName = h('span');
@@ -122,7 +122,7 @@ export class Hub {
     const focusIndex = focused instanceof HTMLElement && this.content.contains(focused) ? panelButtons().indexOf(focused) : -2;
     this.tabBar.innerHTML = '';
     this.tabButtons.clear();
-    const tour = inTourMode(s);
+    const tour = s.tour.active;
     toggleClass(this.tabBar, 'hidden', tour);
     const visible = tour ? [] : TABS.filter((t) => t.visible(s));
     if (!tour && !visible.some((t) => t.id === this.tab)) this.tab = 'upgrades';
@@ -181,7 +181,7 @@ export class Hub {
     const tabs = TABS.filter((t) => t.visible(s))
       .map((t) => t.id)
       .join(',');
-    return `${inTourMode(s)}:${tabs}`;
+    return `${s.tour.active}:${tabs}`;
   }
 
   private lastSig = '';
@@ -202,8 +202,7 @@ export class Hub {
     if (this.acc < 0.1 && s.cash === this.lastCash) return;
     this.acc = 0;
     this.lastCash = s.cash;
-    const tour = inTourMode(s);
-    toggleClass(this.modeSwitch, 'hidden', !tourUnlocked(s));
+    const tour = s.tour.active;
     for (const [b, on] of [[this.classicBtn, !tour], [this.tourBtn, tour]] as const) {
       toggleClass(b, 'on', on);
       b.setAttribute('aria-pressed', String(on));

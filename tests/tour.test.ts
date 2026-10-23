@@ -42,4 +42,22 @@ describe('casual tour', () => {
     // Tour rounds book nothing into the main game: no cash, stats, Gulpedia or map progress.
     expect(JSON.stringify({ ...s, tour: null })).toBe(mainGame);
   });
+
+  it('celebrates once for reaching the last goal and once for the last star', () => {
+    const s = defaultSave(0);
+    const moon = MAPS[MAPS.length - 1];
+    for (const m of MAPS) {
+      s.tour.maps[m.id] = true;
+      s.tour.bestLevel[m.id] = m === moon ? 0 : m.goal;
+      s.tour.bestPct[m.id] = 1;
+      s.tour.bestClear[m.id] = m === moon ? 0 : TOUR.par[m.id];
+    }
+    const atMoon = (over: Partial<RoundSummary>) => settleTour(s, round({ mapId: moon.id, level: moon.goal, ...over }));
+    expect([atMoon({}).finished, atMoon({}).finished]).toEqual([true, false]);
+    let r = atMoon({ percentEaten: 1, time: TOUR.par[moon.id] + 1 });
+    expect([r.finished, r.perfect]).toEqual([false, false]);
+    r = atMoon({ percentEaten: 1, time: TOUR.par[moon.id] });
+    expect([r.finished, r.perfect]).toEqual([false, true]);
+    expect(atMoon({ percentEaten: 1, time: 1 }).perfect).toBe(false);
+  });
 });

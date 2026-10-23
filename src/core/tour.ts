@@ -8,16 +8,6 @@ import { defaultSave, type SaveData } from './save';
  * config/balance.ts). Progress lives in `save.tour` and touches nothing else in the save.
  */
 
-/** The Tour shows in the hub once the player has finished a round of the main game. */
-export function tourUnlocked(save: SaveData): boolean {
-  return save.stats.rounds >= 1 || save.stats.prestiges > 0;
-}
-
-/** The hub is in Tour mode. */
-export function inTourMode(save: SaveData): boolean {
-  return save.tour.active && tourUnlocked(save);
-}
-
 /** Size level (0-based) the hole starts at on a Tour map. */
 export function tourStartLevel(mapId: MapId): number {
   return mapId === MAPS[0].id ? 0 : Math.min(TOUR.entryLevel, mapMaxLevel(mapId));
@@ -35,6 +25,7 @@ export function tourRoundConfig(mapId: MapId): RoundConfig {
     roundTime: Infinity,
     startLevel: tourStartLevel(mapId),
     xpMult: 1,
+    magnetLevel: TOUR.magnetLevel,
     cashMult: 0,
     goldChance: 0,
   };
@@ -57,6 +48,11 @@ export function openNextTourMap(save: SaveData, mapId: MapId, level: number): Ma
   save.tour.maps[next.id] = true;
   save.tour.selectedMap = next.id;
   return next.id;
+}
+
+/** Every Tour map's goal is reached: the Tour is complete. */
+export function tourComplete(save: SaveData): boolean {
+  return MAPS.every((m) => save.tour.bestLevel[m.id] >= m.goal);
 }
 
 /** Stars across every Tour map. */
@@ -82,6 +78,9 @@ export interface TourSettlement {
   bestTime: boolean;
   /** Map opened by this round, if any. */
   opened: MapId | null;
+  /** This round completed the Tour, or earned its last missing star. */
+  finished: boolean;
+  perfect: boolean;
 }
 
 /** Books a finished Tour round into `save.tour`: records, clear time and the next map. */
@@ -89,6 +88,8 @@ export function settleTour(save: SaveData, r: RoundSummary): TourSettlement {
   const t = save.tour;
   const id = r.mapId;
   const starsBefore = tourStars(save, id);
+  const finishedBefore = tourComplete(save);
+  const allBefore = tourStarTotal(save);
   const played = t.bestPct[id] > 0;
   const cleared = r.percentEaten >= MAP_CLEARED_FRACTION;
   const bestLevel = played && r.level > t.bestLevel[id];
@@ -98,5 +99,16 @@ export function settleTour(save: SaveData, r: RoundSummary): TourSettlement {
   t.bestPct[id] = Math.max(t.bestPct[id], r.percentEaten);
   if (cleared && (t.bestClear[id] === 0 || r.time < t.bestClear[id])) t.bestClear[id] = r.time;
   const opened = openNextTourMap(save, id, r.level);
-  return { cleared, starsBefore, stars: tourStars(save, id), bestLevel, bestPercent, bestTime, opened };
+  const allStars = MAPS.length * 3;
+  return {
+    cleared,
+    starsBefore,
+    stars: tourStars(save, id),
+    bestLevel,
+    bestPercent,
+    bestTime,
+    opened,
+    finished: !finishedBefore && tourComplete(save),
+    perfect: allBefore < allStars && tourStarTotal(save) === allStars,
+  };
 }

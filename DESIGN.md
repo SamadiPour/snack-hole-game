@@ -194,12 +194,15 @@ its best %; reaching 100% gives a permanent +25% cash (kept through prestige).
 
 ## Casual Tour
 
-A relaxed mode behind the Classic / Tour switch above PLAY (shown after the first round). In Tour
+A relaxed mode behind the Classic / Tour switch above PLAY, there from the first launch. In Tour
 mode the hub shows a star count instead of cash, a ‹ › picker for the open Tour maps, and the Tour
 map list in place of the shop; PLAY starts the selected Tour map. It uses the base hole, with
 no upgrades, abilities, helpers or golden props, and has no timer, cash or shop. Props give XP
 without the map's `xpMul`, which is there to slow upgraded players (`tourRoundConfig` in
-`core/tour.ts`, numbers in `TOUR`).
+`core/tour.ts`, numbers in `TOUR`). A light built-in magnet (half a Magnet level, reaching 21% of
+the radius past the rim) forgives loose steering: it cuts clear times about 5% in the sim (a full
+level, about 9%), and since its reach and pull follow the radius it adds less at big sizes
+(+8–20% swallows per second) than at small ones (+15–55%), with no measurable sim cost.
 
 - The maps come in the main game's order. The first starts at size 1 and every later one at size 11
   (`TOUR.entryLevel`), so the hole never drops back to a speck. Carrying the size over from the map
@@ -213,6 +216,8 @@ without the map's `xpMul`, which is there to slow upgraded players (`tourRoundCo
   one size vacuuming crumbs.
 - Three stars per map: reach the goal, clear the map, clear it within par (`TOUR.par`: the casual
   player's median clear, rounded up to 30 s, plus 30 s).
+- Reaching the Moon Base goal completes the Tour, and earning the last of the 21 stars makes it
+  perfect: each gets a celebration screen (fanfare, flash) after that round's results.
 - Tour rounds book nothing into the main game (no cash, stats, Gulpedia, trophies or map
   progress). Progress lives in `save.tour` and survives Singularities. Since nothing reaches the
   Gulpedia, the first landmark of each kind gets the full slow-motion moment once per round.
@@ -221,14 +226,14 @@ without the map's `xpMul`, which is there to slow upgraded players (`tourRoundCo
 
 | Map | Start size | Goal | Goal (`--human`) | Clear (`--human`) | Clear (`--good`) | Par |
 |---|---|---|---|---|---|---|
-| Sunny Suburb | 1 | 17 | 2:24 | 5:50 | 4:53 | 6:30 |
-| Happy Farm | 11 | 19 | 2:00 | 7:08 | 5:11 | 8:00 |
-| Downtown | 11 | 26 | 2:40 | 4:04 | 3:33 | 5:00 |
-| Harbor | 11 | 24 | 2:28 | 4:00 | 3:28 | 5:00 |
-| Airport | 11 | 28 | 5:45 | 6:13 | 5:34 | 7:00 |
-| Spaceport | 11 | 29 | 5:07 | 5:26 | 5:00 | 6:00 |
-| Moon Base | 11 | 25 | 6:08 | 7:21 | 6:47 | 8:00 |
-| Whole Tour | | | 26:31 | 40:02 | 34:26 | |
+| Sunny Suburb | 1 | 17 | 2:13 | 5:17 | 4:13 | 6:00 |
+| Happy Farm | 11 | 19 | 2:09 | 7:00 | 4:30 | 7:30 |
+| Downtown | 11 | 26 | 2:37 | 3:42 | 3:07 | 4:30 |
+| Harbor | 11 | 24 | 2:32 | 4:03 | 3:17 | 5:00 |
+| Airport | 11 | 28 | 5:12 | 5:40 | 4:48 | 6:30 |
+| Spaceport | 11 | 29 | 4:53 | 5:11 | 4:56 | 6:00 |
+| Moon Base | 11 | 25 | 6:09 | 7:10 | 5:53 | 8:00 |
+| Whole Tour | | | 25:46 | 38:02 | 30:45 | |
 
 The longest stretch without eating anything is 8 s (`--human`). Like the main sim, these times are
 a lower bound for real players.
