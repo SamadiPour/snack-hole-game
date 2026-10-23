@@ -22,6 +22,8 @@ export class Hub {
   private dirty = true;
   private acc = 0;
   private lastCash = -1;
+  /** What the player last clicked in the panel: a rebuild keeps its card at the same place on screen. */
+  private pressed: Element | null = null;
   onPlay: (() => void) | null = null;
   onSettings: (() => void) | null = null;
 
@@ -35,6 +37,7 @@ export class Hub {
     this.tabBar = h('div', { class: 'tab-bar', role: 'tablist', 'aria-label': 'Shop' });
     // Focusable as a fallback target, so focus never drops to <body> when the panel rebuilds.
     this.content = h('div', { class: 'tab-content', role: 'tabpanel', tabindex: '-1' });
+    this.content.addEventListener('click', (e) => (this.pressed = e.target instanceof Element ? e.target : null), true);
     this.playMap = h('div', { class: 'play-map' });
     this.playInfo = h('div', { class: 'play-info' });
     this.playBtn = h('button', { class: 'play-btn', onclick: () => this.onPlay?.() }, h('span', { class: 'play-icon' }, '▶'), 'PLAY');
@@ -69,6 +72,7 @@ export class Hub {
 
   selectTab(id: TabId): void {
     this.tab = id;
+    this.pressed = null;
     this.api.save.flags[`tab_${id}`] = true;
     this.dirty = true;
   }
@@ -76,6 +80,8 @@ export class Hub {
   /**
    * Rebuilding replaces every button. Focus moves to the same tab or the same position in the
    * panel afterwards; otherwise it would drop to <body>, where Enter / Space start a round.
+   * The card the player pressed (or focused) stays where it was on screen, even when a purchase
+   * changed the height of text above it, so the panel does not jump under the pointer.
    */
   private rebuild(): void {
     const s = this.api.save;
@@ -109,11 +115,23 @@ export class Hub {
       this.tabButtons.set(t.id, b);
       this.tabBar.appendChild(b);
     }
+    const top = (el: Element) => el.getBoundingClientRect().top - this.content.getBoundingClientRect().top;
+    const body = this.content.firstElementChild;
+    let anchor = this.pressed ?? (focusIndex >= 0 ? focused : null);
+    while (anchor && anchor.parentElement !== body) anchor = anchor.parentElement;
+    const anchorIndex = anchor && body ? [...body.children].indexOf(anchor) : -1;
+    const anchorTop = anchor ? top(anchor) : 0;
     const scroll = this.content.scrollTop;
     this.content.innerHTML = '';
     this.cards = [];
     this.content.appendChild(renderTab(this.tab, this.api, this.cards));
+    // Fill the live text first: restoring the scroll into a panel that is still short (the
+    // Singularity hero is empty until its first update) clamps it.
+    for (const c of this.cards) c.update();
     this.content.scrollTop = scroll;
+    const again = anchorIndex >= 0 ? this.content.firstElementChild?.children[anchorIndex] : undefined;
+    if (again) this.content.scrollTop += top(again) - anchorTop;
+    this.pressed = null;
     this.dirty = false;
     if (focusTab) (this.tabButtons.get(focusTab as TabId) ?? this.tabButtons.get(this.tab))?.focus({ preventScroll: true });
     else if (focusIndex >= -1) {

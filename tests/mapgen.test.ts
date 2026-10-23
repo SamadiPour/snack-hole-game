@@ -28,9 +28,9 @@ const PINNED: Record<MapId, string> = {
   downtown: '43546087',
   farm: 'c4970a1a',
   harbor: '2eedbd16',
-  airport: 'ecf080b7',
+  airport: 'a878b250',
   spaceport: 'b87769ab',
-  moon: 'a0480040',
+  moon: 'bf8a65cf',
 };
 
 /** FNV-1a over every spawn's type, placement, tint and movement (numbers in exact round-trip form). */

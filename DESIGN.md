@@ -68,6 +68,10 @@ from that round. Ending it from the pause menu does count.
   has to sit near the start: the airport apron carries forklifts, big baggage dollies, follow-me
   cars and service vans for sizes 8–11, otherwise those sizes stalled for 10–30 s per level while
   the hole crossed to the landside trees.
+- Set pieces laid out around their own size (the airport's parked planes, hangars and terminal,
+  the Moon Base HQ and domes) get explicit scales, one per size level, so `fillLadder` leaves
+  them alone; a rescaled prop keeps its centre, so a plane shrunk later would no longer reach its
+  stand or jet bridge. `scripts/floorplan.ts` draws the result top-down to check.
 - Solid props (buildings, vehicles, silos, domes…: `solid` in `objects.ts`) block placement:
   scatter never puts props inside them, forced layouts drop small props whose core lands inside
   a solid 1.5x bigger, and wandering animals/people walk around them (1 m blocking raster that
@@ -350,7 +354,7 @@ tests/         vitest: format, economy, shop (helpers, abilities, trophies, offl
                builders, map size ladders
 scripts/       sim.ts (balance), smoke.mjs / shots.mjs / ui-shots.mjs (Playwright screenshots),
                profile.mjs (frame timings), devServer.mjs (each script starts its own Vite
-               unless given a URL)
+               unless given a URL), floorplan.ts (top-down map plans, `--props` for footprints)
 ```
 
 ### Rendering notes
@@ -358,11 +362,17 @@ scripts/       sim.ts (balance), smoke.mjs / shots.mjs / ui-shots.mjs (Playwrigh
 - Ground: one merged mesh of painted shapes (roads, lawns, water…) drawn with depth writes off
   in array order, then an invisible depth-only plane. Both discard fragments inside any hole
   (uniform array, up to 8 holes), so props sinking below y = 0 only show through the opening.
+  Every layer is shaded, so the outside colour is a frame round the map, not a layer under it.
 - Hole: back-side open cylinder with a dark gradient + animated stripes, swirl floor shader,
   bright rim ring and additive glow ring. Props darken with depth (`uFadeDepth`).
 - Props: one `InstancedMesh` per type (≈40–60 draw calls per map); per-instance tint only on
   parts flagged `tintable`. Only dirty instances are rewritten each frame (~1 ms JS per frame
-  with 1,700+ objects).
+  with 1,700+ objects). Each mesh draws only the props whose bounding sphere meets the camera
+  or the sun's shadow camera, packed into its first slots; the set is picked again when the view
+  has moved part of a margin, so a round's start draws a few hundred props, not all 2,000 twice
+  (shadow and colour pass), and swallowed props cost nothing.
+- Frame budget: every screen draws on every refresh. Auto quality starts phones and tablets
+  (`pointer: coarse`) at pixel ratio 1.5. A phone-sized round went from 1.85 to 1.04 ms GPU per frame (Apple M5 Pro, Metal).
 - See-through occluders: in rounds, props too big to swallow that sit between the camera and the
   hole fade to 45% opacity. They are hidden in their instanced mesh and drawn as a single mesh
   (depth-only pre-pass, then a blended colour pass so only the front surface shows).

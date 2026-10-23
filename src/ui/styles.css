@@ -367,6 +367,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1033; fon
   .tab-bar::-webkit-scrollbar { display: none; }
   .tab-btn { flex: 0 0 auto; min-width: 44px; min-height: 44px; justify-content: center; }
   .buy { min-height: 44px; }
+  /* The blur behind the shop panel is redone every frame over the moving world, which costs phones
+     a lot for a panel that is 92% opaque anyway. */
+  .panel { backdrop-filter: none; }
 }
 /* Ability buttons on the left (the default; Settings can keep them right), on any screen that takes
    touch. In-round toasts move to the free bottom-right corner so they never cover the buttons. */

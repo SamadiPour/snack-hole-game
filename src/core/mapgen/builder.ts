@@ -304,7 +304,7 @@ export class MapBuilder {
   }
 
   /** Puts a graph mover at a random edge of the given graph. */
-  graphMover(type: string, graph: number, lane: number, speed: number, opts: { tint?: number; flee?: boolean } = {}): void {
+  graphMover(type: string, graph: number, lane: number, speed: number, opts: { tint?: number; flee?: boolean; scale?: number } = {}): void {
     const g = this.graphs[graph];
     const links = this.links[graph];
     let a = this.rng.int(0, g.nodes.length - 1);
@@ -317,6 +317,7 @@ export class MapBuilder {
     if (!g.adj[a].includes(b)) [a, b] = [b, a];
     this.put(type, x, z, 0, {
       tint: opts.tint,
+      scale: opts.scale,
       move: { kind: 'graph', graph, lane, speed: speed * this.rng.range(0.85, 1.15), flee: opts.flee, from: a, to: b },
     });
   }
