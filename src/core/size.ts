@@ -25,8 +25,9 @@ export function frontierXpMult(f: number, r: number): number {
   return 1 + SIZE.frontierBonus * Math.pow(Math.min(1, f / (SIZE.fit * r)), SIZE.frontierExp);
 }
 
-export function holeSpeed(radius: number, speedMult: number): number {
-  return (SIZE.speedBase + SIZE.speedPerRadius * radius) * speedMult;
+/** `k` scales the constant term (World.affine: eases back to 1 after a Cosmos flip). */
+export function holeSpeed(radius: number, speedMult: number, k = 1): number {
+  return (SIZE.speedBase * k + SIZE.speedPerRadius * radius) * speedMult;
 }
 
 export function canEat(footprint: number, radius: number): boolean {

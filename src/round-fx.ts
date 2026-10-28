@@ -1,8 +1,10 @@
 import { MAPS, SIZE, TOUR, type MapId } from './config/balance';
-import { OBJECT_TYPES } from './config/objects';
+import { REALMS } from './config/cosmos';
+import { OBJECT_TYPES, TYPE_INDEX } from './config/objects';
 import type { Audio } from './audio/audio';
+import { cosmicLevel, realSize, worldName, type CosmosRun, type CosmosSettlement } from './core/cosmos';
 import * as eco from './core/economy';
-import { formatCash } from './core/format';
+import { formatCash, formatDuration, formatLength } from './core/format';
 import type { RoundSettlement } from './core/round';
 import type { SaveData } from './core/save';
 import { nextTourMap, tourStarTotal, type TourSettlement } from './core/tour';
@@ -10,7 +12,7 @@ import type { EventId, World, WObj } from './core/world';
 import { reducedMotion } from './render/motion';
 import type { GameRenderer } from './render/scene';
 import { cachedThumb, thumbFor } from './render/thumbs';
-import { showResults, showTourComplete, showTourResults } from './ui/dialogs';
+import { showCosmosComplete, showCosmosResults, showResults, showTourComplete, showTourResults } from './ui/dialogs';
 import { h } from './ui/dom';
 import type { Hud } from './ui/hud';
 import { toast } from './ui/toast';
@@ -72,6 +74,11 @@ export class RoundFeedback {
     return timeScale;
   }
 
+  /** Landmark slow-motion is running (a Cosmos flip waits for it to end). */
+  get slowMotion(): boolean {
+    return this.slowmo > 0;
+  }
+
   /** Screen shake, unless the player turned it off or prefers reduced motion. */
   shake(amount: number): void {
     if (this.d.save().settings.shake && !reducedMotion()) this.d.renderer.shake(amount);
@@ -104,7 +111,7 @@ export class RoundFeedback {
   showTourResults(w: World, r: TourSettlement, opened: MapId | null, onTour: () => void, onNext: (() => void) | null): void {
     // A cleared map already played the big fanfare when it happened.
     if (!r.cleared) this.d.audio.fanfare();
-    const m = eco.mapDef(w.cfg.mapId);
+    const m = eco.mapDef(w.cfg.mapId as MapId);
     const next = nextTourMap(m.id);
     const biggest = w.biggest;
     const place = (id: MapId) => ({ name: eco.mapDef(id).name, icon: eco.mapDef(id).icon });
@@ -169,10 +176,64 @@ export class RoundFeedback {
         level: w.main.level,
         bestRound: r.bestRound,
         discoveries: r.discovered.map((t) => ({ name: OBJECT_TYPES[t].name, img: thumbFor(t) })),
-        mapName: eco.mapDef(w.cfg.mapId).name,
+        mapName: worldName(w.cfg.mapId),
       },
       onContinue,
     );
+  }
+
+  /** A Cosmos flip just happened: the new realm's banner, a whoosh and a rumble. */
+  scaleUp(w: World, realm: number): void {
+    const r = REALMS[realm];
+    this.d.audio.scaleUp();
+    this.shake(0.6);
+    this.d.renderer.pulseHole(1.5);
+    this.d.hud.banner(`${r.icon} ${r.name.toUpperCase()}`, `You are ${formatLength(realSize(realm, w.main.r))} wide`);
+  }
+
+  /** The last realm's goal: the galaxy falls into the hole. */
+  finale(): void {
+    this.d.audio.scaleUp();
+    this.d.audio.landmark(40, true);
+    this.shake(1.2);
+    this.d.hud.hideHint();
+    this.d.hud.banner('🌌 THE MILKY WAY', 'Down it goes', 'big');
+  }
+
+  /** End of a Cosmos run: a finished journey gets its celebration first, then the results. */
+  showCosmosResults(w: World, run: CosmosRun, r: CosmosSettlement, onHub: () => void, onAgain: () => void): void {
+    // A finished journey's biggest bite is the galaxy itself (its core stands in for the picture).
+    const biggest = w.biggest;
+    const core = TYPE_INDEX.sgra;
+    const show = () =>
+      showCosmosResults(
+        {
+          finished: run.finished,
+          time: run.time,
+          // The splits end at the furthest realm (a dev run can start past the first).
+          realms: run.splits.map((split, i) => {
+            const m = REALMS[run.realm - run.splits.length + 1 + i];
+            return { name: m.name, icon: m.icon, split };
+          }),
+          size: formatLength(realSize(run.realm, w.main.r)),
+          eaten: w.eaten,
+          combo: w.comboBest,
+          biggestName: run.finished ? 'The Milky Way' : biggest ? OBJECT_TYPES[biggest.t].name : '',
+          biggestImg: run.finished && core !== undefined ? thumbFor(core) : biggest ? thumbFor(biggest.t, biggest.tint) : '',
+          bestTime: r.bestTime,
+          bestRealm: r.bestRealm,
+        },
+        onHub,
+        onAgain,
+      );
+    if (!run.finished) {
+      this.d.audio.fanfare();
+      show();
+      return;
+    }
+    this.d.audio.fanfare(true);
+    this.shake(1);
+    showCosmosComplete({ first: r.firstFinish, time: formatDuration(run.time) }, show);
   }
 
   handleEvents(w: World): void {
@@ -200,18 +261,21 @@ export class RoundFeedback {
         }
         case 'level': {
           if (!inRound) break;
+          // The flip to the next Cosmos realm is its own moment.
+          if (w.cfg.cosmos && e.level >= w.cfg.cosmos.goal) break;
           const hole = w.main;
           renderer.particles.ringBurst(hole.x, hole.z, hole.baseR, renderer.skinColor);
           renderer.pulseHole(1);
           audio.levelUp();
           const unlocked = this.newlyEdible(w, e.level);
-          const max = e.level >= w.cfg.maxLevel;
+          const max = !w.cfg.cosmos && e.level >= w.cfg.maxLevel;
+          const size = (w.cfg.cosmos ? cosmicLevel(w.cfg.cosmos.realm, e.level) : e.level) + 1;
           // Keep a fresh LANDMARK! banner on screen; the level-up shows as a floater instead.
           if (performance.now() < this.landmarkBannerUntil) {
             const p = renderer.project(hole.x, 0, hole.z);
-            if (p) hud.floater(p.x, p.y - 90, max ? 'MAX SIZE!' : `SIZE ${e.level + 1}!`, 'combo', 1.2);
-          } else if (max) hud.banner('MAX SIZE', `Size ${e.level + 1}: the biggest you get on this map`, 'small');
-          else hud.banner(`SIZE ${e.level + 1}`, unlocked ? `Now you can eat: ${unlocked}` : '', 'small');
+            if (p) hud.floater(p.x, p.y - 90, max ? 'MAX SIZE!' : `SIZE ${size}!`, 'combo', 1.2);
+          } else if (max) hud.banner('MAX SIZE', `Size ${size}: the biggest you get on this map`, 'small');
+          else hud.banner(`SIZE ${size}`, unlocked ? `Now you can eat: ${unlocked}` : '', 'small');
           break;
         }
         case 'comboEnd':
@@ -239,6 +303,9 @@ export class RoundFeedback {
           break;
         case 'tick':
           audio.tick(e.s);
+          break;
+        case 'realmUp':
+          hud.hideHint();
           break;
         case 'timeUp':
           hud.hideHint();
@@ -350,7 +417,7 @@ export class RoundFeedback {
     const fitBefore = SIZE.fit * eco.radiusForLevel(level - 1);
     const names = new Set<string>();
     for (const o of w.objects) {
-      if (o.event) continue;
+      if (o.event || o.crumb) continue;
       if (o.f <= fitNow && o.f > fitBefore) names.add(OBJECT_TYPES[o.t].name);
     }
     return [...names].slice(0, 3).join(', ');

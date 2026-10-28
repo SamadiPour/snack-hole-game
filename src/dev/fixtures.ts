@@ -123,6 +123,11 @@ const FIXTURES: Record<string, (s: SaveData) => void> = {
     }
     t.selectedMap = MAPS[MAPS.length - 1].id;
   },
+  /** Cosmos selected, two journeys done, the galaxy eaten once (trophy and Big Bang skin owned). */
+  cosmos: (s) => {
+    Object.assign(s.cosmos, { active: true, bestTime: 1234, bestRealm: 8, runs: 2, completions: 1 });
+    checkAchievements(s);
+  },
 };
 
 export function fixtureSave(name: string): SaveData {

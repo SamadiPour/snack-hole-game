@@ -1,16 +1,17 @@
 import { MAPS, TOUR } from '../config/balance';
+import { REALMS } from '../config/cosmos';
 import { mapDef, mapMaxLevel, roundTimeFor, startLevel } from '../core/economy';
 import { formatCash, formatDuration, formatNumber, formatPercent } from '../core/format';
-import type { SaveData } from '../core/save';
+import { gameMode, type SaveData } from '../core/save';
 import { tourStarTotal, tourStars, tourStartLevel } from '../core/tour';
 import type { Card } from './cards';
 import { h, setText, toggleClass } from './dom';
-import { TABS, renderTab, starText, tourPanel, type HubApi, type TabId } from './tabs';
+import { TABS, cosmosPanel, renderTab, starText, tourPanel, type HubApi, type TabId } from './tabs';
 
 /**
- * Between-rounds screen: top bar, big Play button and the tabbed shop panel. A Classic / Tour
- * switch above PLAY flips it into Tour mode: a star count instead of cash, a Tour map picker, and
- * the Tour map list in place of the shop.
+ * Between-rounds screen: top bar, big Play button and the tabbed shop panel. A Classic / Tour /
+ * Cosmos switch above PLAY flips the mode. Tour: a star count instead of cash, a Tour map picker,
+ * and the Tour map list in place of the shop. Cosmos: the journey's records and its nine realms.
  */
 export class Hub {
   readonly root: HTMLDivElement;
@@ -23,6 +24,7 @@ export class Hub {
   private modeSwitch: HTMLDivElement;
   private classicBtn: HTMLButtonElement;
   private tourBtn: HTMLButtonElement;
+  private cosmosBtn: HTMLButtonElement;
   private prevMap: HTMLButtonElement;
   private nextMap: HTMLButtonElement;
   private playMap: HTMLDivElement;
@@ -54,9 +56,10 @@ export class Hub {
     // Focusable as a fallback target, so focus never drops to <body> when the panel rebuilds.
     this.content = h('div', { class: 'tab-content', role: 'tabpanel', tabindex: '-1' });
     this.content.addEventListener('click', (e) => (this.pressed = e.target instanceof Element ? e.target : null), true);
-    this.classicBtn = h('button', { class: 'mode-btn', onclick: () => api.setTourMode(false) }, 'Classic');
-    this.tourBtn = h('button', { class: 'mode-btn', onclick: () => api.setTourMode(true) }, '🧭 Tour');
-    this.modeSwitch = h('div', { class: 'mode-switch', role: 'group', 'aria-label': 'Game mode' }, this.classicBtn, this.tourBtn);
+    this.classicBtn = h('button', { class: 'mode-btn', onclick: () => api.setMode('classic') }, 'Classic');
+    this.tourBtn = h('button', { class: 'mode-btn', onclick: () => api.setMode('tour') }, '🧭 Tour');
+    this.cosmosBtn = h('button', { class: 'mode-btn', onclick: () => api.setMode('cosmos') }, '🌌 Cosmos');
+    this.modeSwitch = h('div', { class: 'mode-switch', role: 'group', 'aria-label': 'Game mode' }, this.classicBtn, this.tourBtn, this.cosmosBtn);
     this.prevMap = h('button', { class: 'icon-btn map-step', 'aria-label': 'Previous Tour map', onclick: () => this.stepTourMap(-1) }, '‹');
     this.nextMap = h('button', { class: 'icon-btn map-step', 'aria-label': 'Next Tour map', onclick: () => this.stepTourMap(1) }, '›');
     this.playMapName = h('span');
@@ -122,11 +125,12 @@ export class Hub {
     const focusIndex = focused instanceof HTMLElement && this.content.contains(focused) ? panelButtons().indexOf(focused) : -2;
     this.tabBar.innerHTML = '';
     this.tabButtons.clear();
-    const tour = s.tour.active;
-    toggleClass(this.tabBar, 'hidden', tour);
-    const visible = tour ? [] : TABS.filter((t) => t.visible(s));
-    if (!tour && !visible.some((t) => t.id === this.tab)) this.tab = 'upgrades';
-    if (!tour) {
+    const mode = gameMode(s);
+    const shop = mode === 'classic';
+    toggleClass(this.tabBar, 'hidden', !shop);
+    const visible = shop ? TABS.filter((t) => t.visible(s)) : [];
+    if (shop && !visible.some((t) => t.id === this.tab)) this.tab = 'upgrades';
+    if (shop) {
       s.flags.tab_upgrades = true;
       s.flags[`tab_${this.tab}`] = true;
     }
@@ -159,7 +163,7 @@ export class Hub {
     const scroll = this.content.scrollTop;
     this.content.innerHTML = '';
     this.cards = [];
-    this.content.appendChild(tour ? tourPanel(this.api, this.cards) : renderTab(this.tab, this.api, this.cards));
+    this.content.appendChild(mode === 'tour' ? tourPanel(this.api, this.cards) : mode === 'cosmos' ? cosmosPanel(this.api, this.cards) : renderTab(this.tab, this.api, this.cards));
     // Fill the live text first: restoring the scroll into a panel that is still short (the
     // Singularity hero is empty until its first update) clamps it.
     for (const c of this.cards) c.update();
@@ -181,7 +185,7 @@ export class Hub {
     const tabs = TABS.filter((t) => t.visible(s))
       .map((t) => t.id)
       .join(',');
-    return `${s.tour.active}:${tabs}`;
+    return `${gameMode(s)}:${tabs}`;
   }
 
   private lastSig = '';
@@ -202,18 +206,20 @@ export class Hub {
     if (this.acc < 0.1 && s.cash === this.lastCash) return;
     this.acc = 0;
     this.lastCash = s.cash;
-    const tour = s.tour.active;
-    for (const [b, on] of [[this.classicBtn, !tour], [this.tourBtn, tour]] as const) {
+    const mode = gameMode(s);
+    const tour = mode === 'tour';
+    for (const [b, on] of [[this.classicBtn, mode === 'classic'], [this.tourBtn, tour], [this.cosmosBtn, mode === 'cosmos']] as const) {
       toggleClass(b, 'on', on);
       b.setAttribute('aria-pressed', String(on));
     }
-    toggleClass(this.cashWrap, 'hidden', tour);
-    toggleClass(this.dm, 'hidden', tour || !(s.dmTotal > 0 || s.dm > 0));
-    toggleClass(this.stars, 'hidden', !tour);
+    toggleClass(this.cashWrap, 'hidden', mode !== 'classic');
+    toggleClass(this.dm, 'hidden', mode !== 'classic' || !(s.dmTotal > 0 || s.dm > 0));
+    toggleClass(this.stars, 'hidden', mode === 'classic');
     toggleClass(this.prevMap, 'hidden', !tour);
     toggleClass(this.nextMap, 'hidden', !tour);
-    if (tour) {
-      this.updateTour(s);
+    if (mode !== 'classic') {
+      if (tour) this.updateTour(s);
+      else this.updateCosmos(s);
       for (const c of this.cards) c.update();
       return;
     }
@@ -232,6 +238,16 @@ export class Hub {
         : `${roundTimeFor(s)}s · start size ${start + 1}${maxed} · ${goalText(s)}`,
     );
     for (const c of this.cards) c.update();
+  }
+
+  private updateCosmos(s: SaveData): void {
+    const c = s.cosmos;
+    const first = REALMS[0];
+    const last = REALMS[REALMS.length - 1];
+    setText(this.stars, c.bestTime ? `🌌 ${formatDuration(c.bestTime)}` : c.runs ? `${REALMS[c.bestRealm].icon} ${REALMS[c.bestRealm].name}` : '🌌 Cosmos');
+    setText(this.playMapName, `${first.icon} Quark → ${last.icon} Galaxy`);
+    setText(this.playMapStars, '');
+    setText(this.playInfo, `No timer · ${REALMS.length} scales · ${c.bestTime ? `best ${formatDuration(c.bestTime)}` : 'about 20 minutes'}`);
   }
 
   private updateTour(s: SaveData): void {

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { COSMOS_BUILDERS } from './cosmos';
 import { G } from './geo';
 
 /** Toy palette. */
@@ -1170,4 +1171,6 @@ export const BUILDERS: Record<string, Builder> = {
     g.boxB(9.04, 1.0, 5.04, 0, 3, 0, C.cyan);
     return g.build();
   },
+
+  ...COSMOS_BUILDERS,
 };

@@ -1,7 +1,9 @@
-import { ABILITIES, type AbilityId } from '../config/balance';
+import { ABILITIES, type AbilityId, type MapId } from '../config/balance';
+import { REALMS } from '../config/cosmos';
 import { OBJECT_TYPES } from '../config/objects';
+import { cosmicLevel, journeyProgress, realSize } from '../core/cosmos';
 import { levelToEat, mapDef } from '../core/economy';
-import { formatCash, formatDuration, formatPercent } from '../core/format';
+import { formatCash, formatDuration, formatLength, formatPercent } from '../core/format';
 import type { World } from '../core/world';
 import { h, setText, toggleClass } from './dom';
 
@@ -15,6 +17,8 @@ interface AbilityButton {
 /**
  * In-round overlay: timer, size badge, cash, combo meter, ability buttons, floaters, banners. A
  * casual Tour round has no timer or cash: the timer counts up and the cash pill shows the size goal.
+ * Cosmos shows the hole's real width there, the realm instead of % eaten, a size number that keeps
+ * climbing across realms and a powers-of-ten bar from a quark to the galaxy.
  */
 export class Hud {
   readonly root: HTMLDivElement;
@@ -37,6 +41,9 @@ export class Hud {
   private pool: HTMLDivElement[] = [];
   private shownCash = 0;
   private casual = false;
+  private scale: HTMLDivElement;
+  private scaleFill: HTMLDivElement;
+  private scaleIcons: HTMLSpanElement[] = [];
   onAbility: ((id: AbilityId) => void) | null = null;
   onPause: (() => void) | null = null;
 
@@ -63,10 +70,15 @@ export class Hud {
     this.floaterLayer = h('div', { class: 'floaters' });
     this.bannerEl = h('div', { class: 'banner', role: 'status', 'aria-live': 'polite' });
     this.hintEl = h('div', { class: 'hud-hint hidden' });
+    this.scaleFill = h('div', { class: 'hud-scale-fill' });
+    const lo = Math.log(REALMS[0].real[0]);
+    const span = Math.log(REALMS[REALMS.length - 1].real[1]) - lo;
+    this.scaleIcons = REALMS.map((r) => h('span', { class: 'hud-scale-icon', style: `left: ${((Math.log(r.real[0]) - lo) / span) * 100}%`, title: r.name }, r.icon));
+    this.scale = h('div', { class: 'hud-scale hidden', 'aria-hidden': 'true' }, h('div', { class: 'hud-scale-inner' }, h('div', { class: 'hud-scale-track' }, this.scaleFill), ...this.scaleIcons));
     this.root = h(
       'div',
       { class: 'hud hidden' },
-      h('div', { class: 'hud-top' }, h('div', { class: 'hud-size' }, this.sizeRing, h('div', { class: 'size-info' }, h('div', { class: 'size-label' }, 'SIZE'), this.snack)), this.timer, h('div', { class: 'hud-right' }, this.cash, this.pct, pauseBtn)),
+      h('div', { class: 'hud-top' }, h('div', { class: 'hud-size' }, this.sizeRing, h('div', { class: 'size-info' }, h('div', { class: 'size-label' }, 'SIZE'), this.snack)), this.timer, this.scale, h('div', { class: 'hud-right' }, this.cash, this.pct, pauseBtn)),
       this.combo,
       this.abilityBar,
       this.floaterLayer,
@@ -83,6 +95,7 @@ export class Hud {
   setup(world: World): void {
     this.shownCash = 0;
     this.casual = world.cfg.casual;
+    toggleClass(this.scale, 'hidden', !world.cfg.cosmos);
     this.abilityBar.innerHTML = '';
     this.abilities = [];
     for (const a of ABILITIES) {
@@ -126,17 +139,26 @@ export class Hud {
     setText(this.timer, this.casual ? formatDuration(world.endedAt || world.time) : formatDuration(Math.ceil(t)));
     toggleClass(this.timer, 'urgent', !this.casual && t <= 10 && world.running);
     const lvl = world.main.level;
-    setText(this.sizeNum, String(lvl + 1));
+    const cosmos = world.cfg.cosmos;
+    // Cosmos counts sizes across realms, so the number never drops at a flip.
+    const shown = (l: number) => (cosmos ? cosmicLevel(cosmos.realm, l) : l) + 1;
+    setText(this.sizeNum, String(shown(lvl)));
     const p = Math.round(world.levelProgress * 100);
     this.sizeRing.style.setProperty('--p', `${p}%`);
     const next = world.nextSnack();
     setText(
       this.snack,
-      next ? `Next: ${OBJECT_TYPES[next.t].name} @ ${levelToEat(next.f) + 1}` : world.atMaxSize ? 'Max size! Eat everything!' : 'Eat everything!',
+      next ? `Next: ${OBJECT_TYPES[next.t].name} @ ${shown(levelToEat(next.f))}` : cosmos || !world.atMaxSize ? 'Eat everything!' : 'Max size! Eat everything!',
     );
 
-    if (this.casual) {
-      const goal = mapDef(world.cfg.mapId).goal;
+    if (cosmos) {
+      const realm = REALMS[cosmos.realm];
+      setText(this.cash, `📏 ${formatLength(realSize(cosmos.realm, world.main.r))}`);
+      setText(this.pct, `${realm.icon} ${realm.name}`);
+      this.scaleFill.style.width = `${(journeyProgress(cosmos.realm, world.main.r) * 100).toFixed(2)}%`;
+      this.scaleIcons.forEach((el, i) => toggleClass(el, 'on', i <= cosmos.realm));
+    } else if (this.casual) {
+      const goal = mapDef(world.cfg.mapId as MapId).goal;
       setText(this.cash, `${lvl >= goal ? '✅' : '🎯'} Size ${goal + 1}`);
     } else {
       // Count-up cash display.
@@ -144,7 +166,7 @@ export class Hud {
       if (world.cash - this.shownCash < 0.5) this.shownCash = world.cash;
       setText(this.cash, formatCash(this.shownCash));
     }
-    setText(this.pct, `${formatPercent(world.percentEaten)} eaten`);
+    if (!cosmos) setText(this.pct, `${formatPercent(world.percentEaten)} eaten`);
 
     const c = world.combo;
     toggleClass(this.combo, 'active', c >= 3);

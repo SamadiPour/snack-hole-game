@@ -370,6 +370,7 @@ export const SKINS: SkinDef[] = [
   { id: 'aurora', name: 'Aurora', rim: '#4dffb8', glow: '#a3f7ff', swirl: 'rings', swirlColor: '#0f5c63', cost: 0, achievement: 'tier3' },
   { id: 'supernova', name: 'Supernova', rim: '#ffef5a', glow: '#ff9a3d', swirl: 'stars', swirlColor: '#a3200f', cost: 0, achievement: 'tier5' },
   { id: 'quasar', name: 'Quasar', rim: '#ffffff', glow: '#7ae3ff', swirl: 'galaxy', swirlColor: '#06123a', cost: 0, achievement: 'tier10' },
+  { id: 'bigbang', name: 'Big Bang', rim: '#fff6d8', glow: '#ff9a5a', swirl: 'galaxy', swirlColor: '#5a0f6e', cost: 0, achievement: 'galaxy' },
 ];
 
 // ---------------------------------------------------------------- bonuses

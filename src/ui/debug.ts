@@ -14,6 +14,8 @@ export interface DebugApi {
   unlockAll: () => void;
   endRound: () => void;
   grow: (levels: number) => void;
+  /** Cosmos: jump to the next realm (or the finale on the last). */
+  nextRealm: () => void;
   simulateOffline: (hours: number) => void;
   info: () => string;
 }
@@ -47,6 +49,7 @@ export class DebugPanel {
       h('div', { class: 'dbg-row' }, btn('+10 DM', () => api.addDm(10)), btn('+100 DM', () => api.addDm(100)), btn('Unlock all', () => api.unlockAll())),
       warp,
       h('div', { class: 'dbg-row' }, btn('+5 size', () => api.grow(5)), btn('End round', () => api.endRound()), btn('Offline 2h', () => api.simulateOffline(2))),
+      h('div', { class: 'dbg-row' }, btn('Next realm', () => api.nextRealm())),
       this.infoEl,
     );
     parent.appendChild(this.root);
@@ -97,6 +100,7 @@ export function debugApiFor(game: Game): DebugApi {
       const { world, state } = st();
       if (world && state === 'round') for (let i = 0; i < n; i++) world.gainXp(eco.xpForLevel(world.main.level));
     },
+    nextRealm: () => game.cosmosSkip(),
     simulateOffline: (hours) => {
       const off = eco.computeOffline({ ...game.save, lastSeen: Date.now() - hours * 3600e3 }, Date.now());
       eco.earn(game.save, off.earned);

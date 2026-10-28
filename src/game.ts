@@ -1,16 +1,21 @@
 import { ABILITIES, AUTOSAVE_SECONDS, MAPS, SKINS, type AbilityId, type DmUpgradeId, type MapId, type UpgradeId } from './config/balance';
+import { COSMOS, REALMS, type WorldId } from './config/cosmos';
+import { typeId } from './config/objects';
 import { Audio } from './audio/audio';
 import { checkAchievements } from './core/achievements';
 import { Bot } from './core/bot';
 import * as eco from './core/economy';
 import { setScientific } from './core/format';
-import { generateMap } from './core/mapgen';
+import { cosmosConfig, flipScale, settleCosmos, worldName } from './core/cosmos';
+import { generateWorld } from './core/mapgen';
+import { generateRealm } from './core/mapgen/cosmos';
 import { settleRound, summarizeRound } from './core/round';
-import { encodeSaveText, serialize, type SaveData } from './core/save';
+import { encodeSaveText, gameMode, serialize, type GameMode, type SaveData } from './core/save';
 import { nextTourMap, openNextTourMap, settleTour, tourRoundConfig } from './core/tour';
 import { World } from './core/world';
 import { devFlags } from './dev/flags';
 import { SaveStore } from './persistence';
+import { geometryFor } from './render/objectsView';
 import { GameRenderer } from './render/scene';
 import { pauseThumbs, prewarmThumbs } from './render/thumbs';
 import { RoundFeedback, type GameState } from './round-fx';
@@ -47,6 +52,13 @@ export class Game implements HubApi {
   private hiddenAt = 0;
   /** Map the current Tour round opened, for its results screen. */
   private tourOpened: MapId | null = null;
+  /** Cosmos realm the hub demo shows; it moves on each time the demo restarts. */
+  private demoRealm = 0;
+  /**
+   * Cosmos run in progress: world time each realm was entered, the finale clock once it runs, and
+   * the realm whose map and models were built ahead.
+   */
+  private journey: { entered: number[]; finale: number; prepared: number } | null = null;
   /** Open pause menu during a round; the simulation is frozen while set. */
   private pauseMenu: ModalHandle | null = null;
   private frameMs = 0;
@@ -197,19 +209,23 @@ export class Game implements HubApi {
     this.audio.setMusicMode('hub');
   }
 
-  /** The map PLAY starts: the selected Tour map in Tour mode, else the selected map. */
-  private hubMap(): MapId {
-    return this.save.tour.active ? this.save.tour.selectedMap : this.save.selectedMap;
+  /** The map PLAY starts: the selected Tour map in Tour mode, else the selected map; a realm in Cosmos. */
+  private hubMap(): WorldId {
+    const mode = gameMode(this.save);
+    return mode === 'cosmos' ? REALMS[this.demoRealm].id : mode === 'tour' ? this.save.tour.selectedMap : this.save.selectedMap;
   }
 
-  /** Attract mode behind the hub: a bot-driven hole roams the map PLAY starts. */
+  /** Attract mode behind the hub: a bot-driven hole roams the map PLAY starts (Cosmos: each realm in turn). */
   private startDemo(): void {
+    const mode = gameMode(this.save);
+    if (mode === 'cosmos' && this.world?.cfg.cosmos) this.demoRealm = (this.demoRealm + 1) % REALMS.length;
     const mapId = this.hubMap();
-    const cfg = this.save.tour.active ? tourRoundConfig(mapId) : eco.buildRoundConfig(this.save, mapId);
+    const cfg =
+      mode === 'cosmos' ? cosmosConfig(this.demoRealm) : mode === 'tour' ? tourRoundConfig(mapId as MapId) : eco.buildRoundConfig(this.save, mapId as MapId);
     cfg.startLevel = Math.max(5, cfg.startLevel + 3);
     cfg.helpers = 0;
     cfg.cashMult = 0;
-    this.world = new World(generateMap(mapId), cfg, { demo: true, seed: devFlags.seed ?? (Date.now() & 0xffff) });
+    this.world = new World(generateWorld(mapId), cfg, { demo: true, seed: devFlags.seed ?? (Date.now() & 0xffff) });
     this.renderer.setWorld(this.world);
     this.hubRestart = 0;
     prewarmThumbs(new Set(this.world.objects.map((o) => o.t)));
@@ -217,8 +233,15 @@ export class Game implements HubApi {
 
   play(): void {
     if (this.state !== 'hub' || anyModalOpen()) return;
-    if (this.save.tour.active) this.startTour(this.save.tour.selectedMap);
+    const mode = gameMode(this.save);
+    if (mode === 'cosmos') this.startCosmos();
+    else if (mode === 'tour') this.startTour(this.save.tour.selectedMap);
     else this.begin(() => eco.buildRoundConfig(this.save));
+  }
+
+  /** A Cosmos journey from its first realm (devFlags.realm starts a later one in dev builds). */
+  private startCosmos(): void {
+    this.begin(() => cosmosConfig(Math.min(REALMS.length - 1, devFlags.realm ?? 0)));
   }
 
   /** Starts a casual Tour round on an open Tour map, selecting it for the hub's next PLAY. */
@@ -243,19 +266,24 @@ export class Game implements HubApi {
     this.audio.click();
     this.setState('round');
     this.hub.show(false);
-    this.world = new World(generateMap(cfg.mapId), cfg, { seed: devFlags.seed ?? (Date.now() & 0xffffff) + 1 });
+    this.world = new World(generateWorld(cfg.mapId), cfg, { seed: devFlags.seed ?? (Date.now() & 0xffffff) + 1 });
     this.renderer.setWorld(this.world);
     this.hud.setup(this.world);
     this.hud.show(true);
     this.input.enabled = true;
     this.fx.newRound();
     this.tourOpened = null;
-    const map = eco.mapDef(cfg.mapId);
-    // The Tour can be a player's first round ever: it gets the steering tip then.
-    const firstEver = this.save.stats.rounds === 0 && MAPS.every((m) => this.save.tour.bestPct[m.id] === 0);
+    this.journey = cfg.cosmos ? { entered: [0], finale: -1, prepared: -1 } : null;
+    // Tour or Cosmos can be a player's first round ever: it gets the steering tip then.
+    const firstEver = this.save.stats.rounds === 0 && MAPS.every((m) => this.save.tour.bestPct[m.id] === 0) && this.save.cosmos.runs === 0;
     const steer = matchMedia('(pointer: coarse)').matches ? '👆 Drag anywhere to steer the hole' : '🖱️ Point where you want to go (or use WASD / arrows)';
-    if (cfg.casual) {
-      const next = nextTourMap(cfg.mapId);
+    if (cfg.cosmos) {
+      const r = REALMS[cfg.cosmos.realm];
+      this.hud.banner('GO!', `${r.icon} ${r.name} · Cosmos`);
+      this.hud.hint(firstEver ? steer : '🌌 Eat your way from a quark to the whole galaxy', firstEver ? 9 : 6);
+    } else if (cfg.casual) {
+      const map = eco.mapDef(cfg.mapId as MapId);
+      const next = nextTourMap(map.id);
       this.hud.banner('GO!', `${map.name} · Casual Tour`);
       if (firstEver) this.hud.hint(steer, 9);
       else this.hud.hint(next && !this.save.tour.maps[next.id] ? `🎯 Reach size ${map.goal + 1} to open ${next.name}` : '🍽️ No timer: eat it all at your own pace', 6);
@@ -263,7 +291,7 @@ export class Game implements HubApi {
       this.hud.banner('EAT!', 'Swallow anything smaller than the hole');
       this.hud.hint(steer, 9);
     } else {
-      this.hud.banner('GO!', map.name);
+      this.hud.banner('GO!', worldName(cfg.mapId));
       if (this.save.stats.rounds === 1) this.hud.hint('Bigger hole = bigger snacks. Keep eating to grow!', 5);
       else if (cfg.abilities.dash.level > 0 && this.save.stats.abilitiesUsed === 0) this.hud.hint('⚡ Press Space or tap the ability button to Dash', 6);
       else this.hud.hideHint();
@@ -284,8 +312,9 @@ export class Game implements HubApi {
       {
         timeLeft: w.timeLeft,
         cash: w.cash,
-        mapName: eco.mapDef(w.cfg.mapId).name,
+        mapName: worldName(w.cfg.mapId),
         tour: w.cfg.casual ? { played: w.time, percent: w.percentEaten } : null,
+        cosmos: !!w.cfg.cosmos,
         onSettings: () => this.openSettings(),
         onQuit: () => {
           if (this.world === w && w.running) w.timeLeft = 0;
@@ -322,10 +351,22 @@ export class Game implements HubApi {
     this.setState('results');
     this.input.enabled = false;
     this.input.reset();
+    if (w.cfg.cosmos && this.journey) {
+      const realm = w.cfg.cosmos.realm;
+      const entered = this.journey.entered;
+      const end = w.endedAt || w.time;
+      const run = { realm, time: end, finished: this.journey.finale >= 0, splits: entered.map((t, i) => (entered[i + 1] ?? end) - t) };
+      const r = settleCosmos(this.save, run);
+      this.journey = null;
+      this.grantAchievements();
+      this.persist();
+      this.fx.showCosmosResults(w, run, r, () => this.enterHub(), () => this.startCosmos());
+      return;
+    }
     if (w.cfg.casual) {
       const r = settleTour(this.save, summarizeRound(w));
       this.persist();
-      const next = nextTourMap(w.cfg.mapId);
+      const next = nextTourMap(w.cfg.mapId as MapId);
       // Finishing the Tour (or its last star) gets its own celebration after the results.
       const then = (go: () => void) => (r.finished || r.perfect ? () => this.fx.tourComplete(r.perfect, go) : go);
       const onNext = next && this.save.tour.maps[next.id] ? then(() => this.startTour(next.id)) : null;
@@ -398,14 +439,19 @@ export class Game implements HubApi {
       // Sub-step so time warp stays stable.
       const steps = Math.min(8, Math.max(1, Math.ceil(dt / 0.034)));
       const ts = performance.now();
-      for (let i = 0; i < steps; i++) w.step(dt / steps);
+      for (let i = 0; i < steps; i++) {
+        w.step(dt / steps);
+        // A Cosmos realm is done: the flip comes after this frame's events, in old coordinates.
+        if (w.realmPending) break;
+      }
       try {
         this.fx.handleEvents(w);
       } finally {
         // Drop the batch even when a handler throws, so one bad event never replays every frame.
         w.events.length = 0;
       }
-      if (this.state === 'round' && w.cfg.casual) this.noteTourGoal(w);
+      if (this.state === 'round' && w.cfg.cosmos) this.stepCosmos(w, dt);
+      else if (this.state === 'round' && w.cfg.casual) this.noteTourGoal(w);
       this.simMs += (performance.now() - ts - this.simMs) * 0.05;
       if (this.state === 'hub') {
         this.hubRestart += dt;
@@ -429,9 +475,62 @@ export class Game implements HubApi {
     this.frameMs += (performance.now() - t0 - this.frameMs) * 0.05;
   }
 
+  /**
+   * Cosmos, each round frame: once the realm's goal is reached (and any landmark slow-motion is
+   * over) the world flips into the next realm; on the last realm the finale runs, then the run ends.
+   */
+  private stepCosmos(w: World, dt: number): void {
+    const j = this.journey;
+    if (!j) return;
+    if (j.finale >= 0) {
+      j.finale += dt;
+      w.input = { x: 0, z: 0 };
+      if (j.finale >= COSMOS.finale && w.running) {
+        this.fx.flash();
+        w.timeLeft = 0;
+      }
+      return;
+    }
+    const realm = w.cfg.cosmos!.realm;
+    if (j.prepared <= realm && realm + 1 < REALMS.length) {
+      // Build the next realm's map and prop models while the player is busy in this one, so the
+      // flip frame only rebases the world and fills the meshes.
+      j.prepared = realm + 1;
+      const next = REALMS[realm + 1].id;
+      const idle = window.requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 200));
+      idle(() => {
+        for (const t of new Set(generateRealm(next).spawns.map((sp) => typeId(sp.type)))) geometryFor(t);
+      });
+    }
+    if (!w.realmPending || this.fx.slowMotion) return;
+    const flip = flipScale(w);
+    if (!flip) {
+      j.finale = 0;
+      this.input.enabled = false;
+      this.input.reset();
+      w.swallowAll();
+      this.renderer.galaxyFinale(w);
+      this.fx.finale();
+      return;
+    }
+    j.entered.push(w.time);
+    this.renderer.rebase(w, flip);
+    this.bot.reset();
+    this.fx.scaleUp(w, flip.realm);
+    this.audio.setAmbient(REALMS[flip.realm].id);
+  }
+
+  /** Dev and smoke tests: grows the hole to its realm's goal, so the next frame flips. */
+  cosmosSkip(): void {
+    const w = this.world;
+    const c = w?.cfg.cosmos;
+    if (!w || !c || this.state !== 'round') return;
+    while (w.main.level < c.goal) w.gainXp(eco.xpForLevel(w.main.level) - w.main.xp);
+  }
+
   /** Opens the next Tour map the moment the round reaches the goal, so leaving the tab keeps it. */
   private noteTourGoal(w: World): void {
-    const opened = openNextTourMap(this.save, w.cfg.mapId, w.main.level);
+    const opened = openNextTourMap(this.save, w.cfg.mapId as MapId, w.main.level);
     if (!opened) return;
     this.tourOpened = opened;
     this.fx.tourOpened(opened);
@@ -505,10 +604,11 @@ export class Game implements HubApi {
     this.afterHubMapChange();
   }
 
-  /** The Classic / Tour switch above PLAY. */
-  setTourMode(on: boolean): void {
-    if (this.state !== 'hub' || this.save.tour.active === on) return;
-    this.save.tour.active = on;
+  /** The Classic / Tour / Cosmos switch above PLAY. */
+  setMode(mode: GameMode): void {
+    if (this.state !== 'hub' || gameMode(this.save) === mode) return;
+    this.save.tour.active = mode === 'tour';
+    this.save.cosmos.active = mode === 'cosmos';
     this.afterHubMapChange();
   }
 

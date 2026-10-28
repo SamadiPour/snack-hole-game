@@ -139,6 +139,19 @@ export class Particles {
     }
   }
 
+  /** Cosmos flip: every particle shrinks by z around the old origin, which lands on (nx, nz). */
+  rebase(z: number, nx: number, nz: number): void {
+    for (let i = 0; i < MAX; i++) {
+      if (this.life[i] <= 0) continue;
+      this.pos[i * 3] = nx + this.pos[i * 3] * z;
+      this.pos[i * 3 + 1] *= z;
+      this.pos[i * 3 + 2] = nz + this.pos[i * 3 + 2] * z;
+      for (let k = 0; k < 3; k++) this.vel[i * 3 + k] *= z;
+      this.baseSize[i] *= z;
+      this.grav[i] *= z;
+    }
+  }
+
   update(dt: number): void {
     // Nothing alive and already hidden on the GPU, or paused with nothing new: no work, no upload.
     if (!this.emitted && (this.live === 0 || dt === 0)) return;

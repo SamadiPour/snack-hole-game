@@ -1,5 +1,5 @@
 import { ABILITIES, MAPS } from '../config/balance';
-import { OBJECT_TYPES } from '../config/objects';
+import { GULPEDIA_TYPES } from '../config/objects';
 import { completedSets } from './economy';
 import type { SaveData } from './save';
 
@@ -50,7 +50,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'helpers4', name: 'Hole Family', desc: 'Own 4 helper holes.', icon: '👨‍👩‍👧‍👦', check: (s) => s.helpers >= 4 },
   { id: 'abilities', name: 'Power Hungry', desc: 'Unlock all abilities.', icon: '⚡', check: (s) => ABILITIES.every((a) => s.abilities[a.id] > 0) },
   { id: 'gulp50', name: 'Collector', desc: 'Discover 50 Gulpedia entries.', icon: '📖', check: (s) => discovered(s) >= 50 },
-  { id: 'gulpAll', name: 'Encyclopedic', desc: 'Discover every Gulpedia entry.', icon: '📚', check: (s) => discovered(s) >= OBJECT_TYPES.length },
+  { id: 'gulpAll', name: 'Encyclopedic', desc: 'Discover every Gulpedia entry.', icon: '📚', check: (s) => discovered(s) >= GULPEDIA_TYPES.length },
   { id: 'sets3', name: 'Set Builder', desc: 'Complete 3 Gulpedia sets.', icon: '🧩', check: (s) => completedSets(s).length >= 3 },
   { id: 'prestige1', name: 'Singularity', desc: 'Collapse into a Singularity.', icon: '🌌', check: (s) => s.stats.prestiges >= 1 },
   { id: 'prestige3', name: 'Event Horizon', desc: 'Reach 3 Singularities.', icon: '🌠', check: (s) => s.stats.prestiges >= 3, skin: 'void' },
@@ -59,6 +59,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'tier3', name: 'Cosmic Appetite', desc: 'Reach Singularity tier 3.', icon: '🌠', check: (s) => s.tier >= 3, skin: 'aurora' },
   { id: 'tier5', name: 'Star Eater', desc: 'Reach Singularity tier 5.', icon: '☀️', check: (s) => s.tier >= 5, skin: 'supernova' },
   { id: 'tier10', name: 'End of Everything', desc: 'Reach Singularity tier 10.', icon: '🕳️', check: (s) => s.tier >= 10, skin: 'quasar' },
+  { id: 'galaxy', name: 'Galaxy Gulper', desc: 'Eat the whole Milky Way in Cosmos.', icon: '🌌', check: (s) => s.cosmos.completions > 0, skin: 'bigbang' },
 ];
 
 const KNOWN = new Set(ACHIEVEMENTS.map((a) => a.id));

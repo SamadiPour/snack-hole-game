@@ -32,6 +32,12 @@ export class Bot {
     private readonly opts: BotOptions = {},
   ) {}
 
+  /** Forget the target and roam point (a Cosmos flip moved the world under them). */
+  reset(): void {
+    this.target = null;
+    this.think = 0;
+  }
+
   steer(world: World, dt: number): { x: number; z: number } {
     const h = world.main;
     const rng = this.opts.rng ?? world.rng;

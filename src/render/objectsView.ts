@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { SIZE } from '../config/balance';
 import { OBJECT_TYPES } from '../config/objects';
-import { ALIVE, DORMANT, FALLING, GONE, MV_NONE, type World, type WObj } from '../core/world';
+import { COSMOS } from '../config/cosmos';
+import { ALIVE, DORMANT, FALLING, GONE, MV_NONE, MV_ORBIT, type World, type WObj } from '../core/world';
 import { createGhostMaterial, createPropMaterial } from './materials';
 import { BUILDERS } from './props';
 
@@ -60,6 +61,20 @@ function drawable(o: WObj): boolean {
   return o.state !== GONE && o.state !== DORMANT;
 }
 
+/**
+ * Cosmos flip: the new realm's props (ids from `from` on) appear behind a ring expanding from
+ * (x, z), scaling in as it passes them.
+ */
+export interface Reveal {
+  from: number;
+  x: number;
+  z: number;
+  r: number;
+  t: number;
+  /** Radius past which every prop is in: the reveal ends there. */
+  end: number;
+}
+
 /** Last view the visible set was picked for (see cull). */
 interface CullView {
   x: number;
@@ -79,6 +94,9 @@ export class ObjectsView {
   readonly group = new THREE.Group();
   readonly material = createPropMaterial();
   readonly goldMaterial = createPropMaterial(true);
+  readonly glowMaterial = createPropMaterial(false, true);
+  /** The Cosmos reveal in progress, if any. */
+  reveal: Reveal | null = null;
   /** Instanced mesh per prop type, golden props in their own mesh: key = type * 2 + gold. */
   private meshes = new Map<number, THREE.InstancedMesh>();
   /** The props each mesh draws, in slot order. */
@@ -98,12 +116,35 @@ export class ObjectsView {
     this.clear();
     this.world = world;
     this.shadows = shadows;
+    this.reveal = null;
+    this.buildMeshes();
+  }
+
+  /**
+   * Cosmos flip: the world was rebased in place and props from `from` on are the new realm's. Builds
+   * the meshes again for the new mix of types, keeping see-through ghosts, and starts the reveal
+   * ring at the hole.
+   */
+  grow(from: number, x: number, z: number): void {
+    for (const m of this.meshes.values()) {
+      this.group.remove(m);
+      m.dispose();
+    }
+    this.meshes.clear();
+    this.slots.clear();
+    const w = this.world!;
+    this.reveal = { from, x, z, r: 0, t: 0, end: w.map.size * 1.5 };
+    this.buildMeshes();
+  }
+
+  private buildMeshes(): void {
     const counts = new Map<number, number>();
-    for (const o of world.objects) counts.set(meshKey(o), (counts.get(meshKey(o)) ?? 0) + 1);
+    for (const o of this.world!.objects) counts.set(meshKey(o), (counts.get(meshKey(o)) ?? 0) + 1);
     for (const [key, n] of counts) {
-      const mesh = new THREE.InstancedMesh(geometryFor(key >> 1), key & 1 ? this.goldMaterial : this.material, n);
-      mesh.castShadow = shadows;
-      mesh.receiveShadow = shadows;
+      const mat = key & 1 ? this.goldMaterial : OBJECT_TYPES[key >> 1].glow ? this.glowMaterial : this.material;
+      const mesh = new THREE.InstancedMesh(geometryFor(key >> 1), mat, n);
+      mesh.castShadow = this.shadows;
+      mesh.receiveShadow = this.shadows;
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       mesh.frustumCulled = false;
       this.meshes.set(key, mesh);
@@ -116,8 +157,19 @@ export class ObjectsView {
     this.refill(0);
   }
 
+  /** 0..1 size of a prop the reveal ring is passing; 0 before the ring reaches it. */
+  private appear(o: WObj): number {
+    const rv = this.reveal;
+    if (!rv || o.id < rv.from) return 1;
+    const t = (rv.r - Math.hypot(o.x - rv.x, o.z - rv.z)) / (2 + o.f * 1.5);
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    return t * t * (3 - 2 * t);
+  }
+
   /** Is the prop's bounding sphere (plus the margin) in the camera's or the shadow's view? */
   private inView(o: WObj): boolean {
+    if (this.appear(o) <= 0) return false;
     if (!this.view) return true;
     _sphere.center.set(o.x, o.y + o.h * 0.5, o.z);
     _sphere.radius = Math.hypot(o.f, o.h * 0.5) + this.margin;
@@ -215,7 +267,7 @@ export class ObjectsView {
       _axis.set(dz / d, 0, -dx / d);
       _qt.setFromAxisAngle(_axis, Math.abs(w) + o.wob * 0.03);
       _q.multiplyQuaternions(_qt, _qy);
-    } else if (o.mv !== MV_NONE && o.h < 2.2 && o.wait <= 0) {
+    } else if (o.mv !== MV_NONE && o.mv !== MV_ORBIT && o.h < 2.2 && o.wait <= 0) {
       // Little walking bob for people and animals.
       y += Math.abs(Math.sin(o.bob)) * 0.06 * o.s;
       _q.copy(_qy);
@@ -223,7 +275,8 @@ export class ObjectsView {
       _q.copy(_qy);
     }
     _p.set(o.x, y, o.z);
-    _s.set(o.s, o.s, o.s);
+    const s = o.s * this.appear(o);
+    _s.set(s, s, s);
     _m.compose(_p, _q, _s);
     const ghost = this.ghosts.get(o);
     if (ghost) {
@@ -344,6 +397,15 @@ export class ObjectsView {
   update(dt: number, time: number): void {
     const w = this.world;
     if (!w) return;
+    const rv = this.reveal;
+    if (rv) {
+      rv.t += dt;
+      rv.r = COSMOS.revealSpeed * rv.t + 0.5 * COSMOS.revealAccel * rv.t * rv.t;
+      if (rv.r > rv.end) this.reveal = null;
+      // Pick the drawn set again every frame while the ring sweeps: it decides who is drawn.
+      this.cullView.x = NaN;
+      for (let i = rv.from; i < w.objects.length; i++) w.objects[i].dirty = true;
+    }
     const objs = w.objects;
     for (let i = 0; i < objs.length; i++) {
       const o = objs[i];

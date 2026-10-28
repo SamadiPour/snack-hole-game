@@ -12,6 +12,7 @@
     "test": "vitest run",
     "sim": "tsx scripts/sim.ts",
     "sim:tour": "tsx scripts/tour-sim.ts",
+    "sim:cosmos": "tsx scripts/cosmos-sim.ts",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

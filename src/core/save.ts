@@ -12,6 +12,7 @@ import {
   type MapId,
   type UpgradeId,
 } from '../config/balance';
+import { REALMS } from '../config/cosmos';
 import { OBJECT_TYPES } from '../config/objects';
 
 /** Render resolution: `auto` steps the pixel ratio down while frames run slow. */
@@ -63,6 +64,25 @@ export interface TourSave {
   bestClear: Record<MapId, number>;
 }
 
+/** Cosmos records (core/cosmos.ts). Cosmos runs book nothing else, except the trophy for finishing. */
+export interface CosmosSave {
+  /** The hub is in Cosmos mode: PLAY starts a journey. */
+  active: boolean;
+  /** Fastest finished journey in seconds; 0 until the galaxy has been eaten. */
+  bestTime: number;
+  /** Furthest realm reached (index into REALMS). */
+  bestRealm: number;
+  runs: number;
+  completions: number;
+}
+
+export type GameMode = 'classic' | 'tour' | 'cosmos';
+
+/** What PLAY starts. */
+export function gameMode(s: SaveData): GameMode {
+  return s.cosmos.active ? 'cosmos' : s.tour.active ? 'tour' : 'classic';
+}
+
 export interface SaveData {
   version: number;
   cash: number;
@@ -93,6 +113,8 @@ export interface SaveData {
   skin: string;
   /** Kept through Singularities: the Tour is apart from runs. */
   tour: TourSave;
+  /** Kept through Singularities too. */
+  cosmos: CosmosSave;
   gulpedia: Record<string, number>;
   achievements: string[];
   /** Misc one-shot UI flags (tabs seen, tutorial hints). */
@@ -140,6 +162,7 @@ export function defaultSave(now = Date.now()): SaveData {
       bestPct: record(MAPS.map((m) => m.id), 0),
       bestClear: record(MAPS.map((m) => m.id), 0),
     },
+    cosmos: { active: false, bestTime: 0, bestRealm: 0, runs: 0, completions: 0 },
     gulpedia: {},
     achievements: [],
     flags: {},
@@ -256,6 +279,12 @@ function clampToGame(s: SaveData): void {
     t.bestLevel[m.id] = level(t.bestLevel[m.id]);
     t.bestPct[m.id] = Math.min(1, t.bestPct[m.id]);
   }
+  const c = s.cosmos;
+  c.bestRealm = level(c.bestRealm, REALMS.length - 1);
+  c.runs = level(c.runs);
+  c.completions = level(c.completions);
+  // One mode at a time: Cosmos wins over Tour, as in gameMode.
+  if (c.active) t.active = false;
 }
 
 /** Version migrations: each step upgrades from version n to n+1. */

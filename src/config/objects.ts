@@ -4,6 +4,7 @@
  * the geometry builders in render/props.ts only have to respect these extents.
  */
 import { SIZE, VALUE } from './balance';
+import { COSMOS_TYPES } from './cosmos/objects';
 
 export type GulpSet =
   | 'street'
@@ -16,7 +17,9 @@ export type GulpSet =
   | 'harbor'
   | 'airport'
   | 'spaceport'
-  | 'moon';
+  | 'moon'
+  /** Cosmos props: never in the Gulpedia (Cosmos books nothing into the main game). */
+  | 'cosmos';
 
 export interface ObjTypeDef {
   id: string;
@@ -37,6 +40,8 @@ export interface ObjTypeDef {
   solid?: 'box' | 'round';
   /** Big set piece: swallowing one near your size limit gets the slow-mo celebration. */
   landmark?: boolean;
+  /** Shines with its own light (stars, photons): drawn mostly unlit. */
+  glow?: boolean;
 }
 
 const T = (
@@ -195,7 +200,12 @@ export const OBJECT_TYPES: ObjTypeDef[] = [
   T('dome', 'Habitat Dome', 12.0, 12.0, 6.0, 'moon', { solid: 'round', landmark: true }),
   T('bigdome', 'Biodome', 22.0, 22.0, 11.0, 'moon', { solid: 'round', landmark: true }),
   T('moonbase', 'Moon Base HQ', 36.0, 36.0, 16.0, 'moon', { valueMul: 1.5, solid: 'round', landmark: true }),
+
+  ...COSMOS_TYPES,
 ];
+
+/** The props the Gulpedia lists: every classic set, without the Cosmos props. */
+export const GULPEDIA_TYPES: ObjTypeDef[] = OBJECT_TYPES.filter((t) => t.set !== 'cosmos');
 
 export const TYPE_INDEX: Record<string, number> = {};
 OBJECT_TYPES.forEach((t, i) => (TYPE_INDEX[t.id] = i));
@@ -263,4 +273,5 @@ export const SET_NAMES: Record<GulpSet, string> = {
   airport: 'Airport',
   spaceport: 'Spaceport',
   moon: 'Moon Base',
+  cosmos: 'Cosmos',
 };

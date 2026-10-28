@@ -14,6 +14,16 @@ const TRACKS: Record<string, string> = {
   airport: 'airport.mp3',
   spaceport: 'spaceport.mp3',
   moon: 'moon.mp3',
+  // Cosmos realms reuse the map tracks until they get their own.
+  quantum: 'moon.mp3',
+  atomic: 'moon.mp3',
+  molecular: 'harbor.mp3',
+  microbial: 'harbor.mp3',
+  garden: 'farm.mp3',
+  hometown: 'suburb.mp3',
+  earth: 'airport.mp3',
+  solar: 'spaceport.mp3',
+  galaxy: 'moon.mp3',
 };
 
 const FADE = 1.2;

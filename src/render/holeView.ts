@@ -162,9 +162,10 @@ export class HoleView {
   }
 
   /** `dt` (real frame seconds) eases the pulse back down. */
-  update(x: number, z: number, r: number, time: number, visible = true, dt = 1 / 60): void {
+  /** `k` scales the wall's constant depth (World.affine, after a Cosmos flip). */
+  update(x: number, z: number, r: number, time: number, visible = true, dt = 1 / 60, k = 1): void {
     this.group.visible = visible && r > 0.01;
-    const depth = r * 2.2 + 1.5;
+    const depth = r * 2.2 + 1.5 * k;
     this.wall.position.set(x, -depth / 2, z);
     this.wall.scale.set(r, depth, r);
     this.bottom.position.set(x, -depth + 0.01, z);

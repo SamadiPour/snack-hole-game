@@ -13,7 +13,8 @@ import {
   type MapId,
   type UpgradeId,
 } from '../config/balance';
-import { OBJECT_TYPES, SET_NAMES, type GulpSet } from '../config/objects';
+import { REALMS } from '../config/cosmos';
+import { GULPEDIA_TYPES, OBJECT_TYPES, SET_NAMES, type GulpSet } from '../config/objects';
 import { ACHIEVEMENTS } from '../core/achievements';
 import {
   abilityCooldown,
@@ -48,8 +49,8 @@ import {
   upgradeEffectText,
   type SingularityPreview,
 } from '../core/economy';
-import { formatCash, formatDuration, formatNumber, formatPercent, formatRate } from '../core/format';
-import type { SaveData } from '../core/save';
+import { formatCash, formatDuration, formatLength, formatNumber, formatPercent, formatRate } from '../core/format';
+import type { GameMode, SaveData } from '../core/save';
 import { tourComplete, tourLockReason, tourStars, tourStartLevel } from '../core/tour';
 import { thumbInto } from '../render/thumbs';
 import { card, lockedCard, section, type Card } from './cards';
@@ -63,7 +64,7 @@ export interface HubApi {
   buyAbility(id: AbilityId): void;
   selectMap(id: MapId): void;
   selectTourMap(id: MapId): void;
-  setTourMode(on: boolean): void;
+  setMode(mode: GameMode): void;
   buyDm(id: DmUpgradeId): void;
   prestige(): void;
   buySkin(id: string): void;
@@ -302,6 +303,42 @@ export function tourPanel(api: HubApi, cards: Card[]): HTMLElement {
   return root;
 }
 
+/** Cosmos mode's panel: the nine realms (unreached ones hidden), records and the reward. */
+export function cosmosPanel(api: HubApi, cards: Card[]): HTMLElement {
+  const c = api.save.cosmos;
+  const root = h('div', { class: 'tab-body' });
+  root.appendChild(
+    section(
+      c.completions > 0 ? 'Cosmos 🏆' : 'Cosmos',
+      'No timer, no shop: start smaller than a quark and eat your way up through nine scales of the universe until you swallow the Milky Way. Each scale shrinks away beneath you once you outgrow it. A journey has no checkpoints.',
+    ),
+  );
+  const records = [
+    c.runs ? `${formatNumber(c.runs)} ${c.runs === 1 ? 'journey' : 'journeys'}` : 'No journeys yet',
+    c.runs ? `furthest: ${REALMS[c.bestRealm].icon} ${REALMS[c.bestRealm].name}` : '',
+    c.bestTime ? `best time ${formatDuration(c.bestTime)}` : '',
+  ].filter(Boolean);
+  root.appendChild(h('div', { class: 'section-sub cosmos-records' }, records.join(' · ')));
+  REALMS.forEach((r, i) => {
+    if (i > 0 && (c.runs === 0 || i > c.bestRealm)) {
+      root.appendChild(lockedCard('❔', '???', `Scale ${i + 1}: reach it on a journey.`));
+      return;
+    }
+    const c2 = card({ icon: r.icon, title: r.name, desc: r.blurb, effect: () => `Scale ${i + 1} · ${formatLength(r.real[0])} to ${formatLength(r.real[1])}` });
+    cards.push(c2);
+    root.appendChild(c2.el);
+  });
+  const skin = SKINS.find((k) => k.id === 'bigbang');
+  if (skin) {
+    root.appendChild(
+      c.completions > 0
+        ? h('div', { class: 'card' }, h('div', { class: 'card-icon' }, '🏆'), h('div', { class: 'card-body' }, h('div', { class: 'card-title' }, 'Big Bang skin'), h('div', { class: 'card-desc' }, 'Yours: equip it in the Skins tab.')))
+        : lockedCard('🏆', 'Big Bang skin', 'Eat the whole galaxy to unlock it, with a trophy.'),
+    );
+  }
+  return root;
+}
+
 /** The Singularity panel's "Resets" and "You keep" lists, with this run's numbers. */
 function singularityLedger(s: SaveData, p: SingularityPreview): { resets: [string, string][]; keeps: [string, string][] } {
   const list = (names: string[]) => (names.length ? names.join(', ') : 'none');
@@ -318,7 +355,7 @@ function singularityLedger(s: SaveData, p: SingularityPreview): { resets: [strin
     ['Dark Matter', `${formatNumber(s.dm)} → ${formatNumber(p.after.dm)}`],
     ...(keepMaps ? [['Unlocked maps', 'Wormhole'] as [string, string]] : []),
     ['Trophies', `${s.achievements.length}/${ACHIEVEMENTS.length}`],
-    ['Gulpedia', `${Object.keys(s.gulpedia).length}/${OBJECT_TYPES.length}`],
+    ['Gulpedia', `${Object.keys(s.gulpedia).length}/${GULPEDIA_TYPES.length}`],
     ['DM tree, skins, 100% maps, records', ''],
   ];
   return { resets, keeps };
@@ -431,8 +468,8 @@ function gulpediaTab(api: HubApi): HTMLElement {
   const root = h('div', { class: 'tab-body' });
   const found = Object.keys(s.gulpedia).length;
   const done = completedSets(s);
-  root.appendChild(section('Gulpedia', `${found}/${OBJECT_TYPES.length} discovered · ${done.length} sets complete (+5% cash each)`));
-  const sets = [...new Set(OBJECT_TYPES.map((t) => t.set))] as GulpSet[];
+  root.appendChild(section('Gulpedia', `${found}/${GULPEDIA_TYPES.length} discovered · ${done.length} sets complete (+5% cash each)`));
+  const sets = [...new Set(GULPEDIA_TYPES.map((t) => t.set))] as GulpSet[];
   for (const set of sets) {
     const ids = gulpSetTypes(set);
     const have = ids.filter((id) => (s.gulpedia[id] ?? 0) > 0).length;

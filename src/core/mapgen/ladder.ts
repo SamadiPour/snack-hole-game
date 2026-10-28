@@ -17,13 +17,15 @@ export function spawnLevel(s: { type: string; scale: number }): number {
  * 2. Gaps that are left (right below lone landmarks) and are longer than `maxGap` levels are
  *    closed by shrinking everything above them by the excess, which keeps the landmarks'
  *    order and relative size.
+ *
+ * `from` is the first level checked: a Cosmos realm starts its hole above size 1.
  */
-export function fillLadder(map: MapData, maxStep = 6, maxGap = 1): void {
+export function fillLadder(map: MapData, maxStep = 6, maxGap = 1, from = 1): void {
   const lv = map.spawns.map(spawnLevel);
   let top = Math.max(...lv);
   const count = new Map<number, number>();
   for (const l of lv) count.set(l, (count.get(l) ?? 0) + 1);
-  for (let g = 1; g < top; g++) {
+  for (let g = from; g < top; g++) {
     if (count.get(g)) continue;
     for (let d = g + 1; d <= Math.min(top, g + maxStep); d++) {
       const n = count.get(d) ?? 0;
@@ -47,7 +49,7 @@ export function fillLadder(map: MapData, maxStep = 6, maxGap = 1): void {
   }
 
   let run = 0;
-  for (let g = 1; g <= top; g++) {
+  for (let g = from; g <= top; g++) {
     if (!count.get(g)) {
       run++;
       continue;

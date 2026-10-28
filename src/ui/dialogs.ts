@@ -158,6 +158,8 @@ export interface PauseInfo {
   mapName: string;
   /** Casual Tour round: seconds played and share of the map eaten (it has no timer or cash). */
   tour: { played: number; percent: number } | null;
+  /** Cosmos journey: leaving ends the run. */
+  cosmos: boolean;
   onSettings: () => void;
   onQuit: () => void;
 }
@@ -173,9 +175,11 @@ export function showPause(info: PauseInfo, onClose: () => void): ModalHandle {
       h(
         'p',
         { class: 'modal-text' },
-        t
-          ? `${info.mapName} · ${formatDuration(t.played)} played · ${formatPercent(t.percent)} eaten`
-          : `${info.mapName} · ${formatDuration(Math.ceil(info.timeLeft))} left · ${formatCash(info.cash)} so far`,
+        info.cosmos && t
+          ? `${info.mapName} · ${formatDuration(t.played)} into the journey`
+          : t
+            ? `${info.mapName} · ${formatDuration(t.played)} played · ${formatPercent(t.percent)} eaten`
+            : `${info.mapName} · ${formatDuration(Math.ceil(info.timeLeft))} left · ${formatCash(info.cash)} so far`,
       ),
       h('button', { class: 'btn primary big', onclick: () => m.close() }, 'Resume'),
       h(
@@ -191,13 +195,17 @@ export function showPause(info: PauseInfo, onClose: () => void): ModalHandle {
               info.onQuit();
             },
           },
-          t ? 'Leave map' : 'End round',
+          info.cosmos ? 'End journey' : t ? 'Leave map' : 'End round',
         ),
       ),
       h(
         'p',
         { class: 'set-hint' },
-        t ? 'Press Esc to resume. Leaving keeps your best size and %, but the map starts over next time.' : 'Press Esc to resume. Ending early keeps the cash you ate.',
+        info.cosmos
+          ? 'Press Esc to resume. A journey has no checkpoints: ending it starts the next one from a quark.'
+          : t
+            ? 'Press Esc to resume. Leaving keeps your best size and %, but the map starts over next time.'
+            : 'Press Esc to resume. Ending early keeps the cash you ate.',
       ),
     ),
     { cls: 'pause-modal', onClose },
@@ -507,6 +515,87 @@ export function showTourComplete(r: { perfect: boolean; stars: number; maxStars:
       ),
       h('div', { class: 'res-grid' }, stat('Stars', `★ ${r.stars} of ${r.maxStars}`), stat('Maps cleared', `${r.cleared} of ${r.maps}`)),
       r.perfect ? null : h('div', { class: 'res-hint' }, 'Clear every map within par for all the stars.'),
+      h('button', { class: 'btn primary big', onclick: () => m.close() }, 'Continue'),
+    ),
+    { cls: 'results-modal', dismissable: false, onClose, focusBox: true },
+  );
+}
+
+export interface CosmosResult {
+  finished: boolean;
+  /** Seconds played. */
+  time: number;
+  /** Every realm reached in order, with the seconds spent there. */
+  realms: { name: string; icon: string; split: number }[];
+  /** Real width of the hole at the end, already formatted. */
+  size: string;
+  eaten: number;
+  combo: number;
+  biggestName: string;
+  biggestImg: string;
+  bestTime: boolean;
+  bestRealm: boolean;
+}
+
+/** End of a Cosmos journey: how far it got, the time in each realm, records. */
+export function showCosmosResults(r: CosmosResult, onHub: () => void, onAgain: () => void): void {
+  const stat = (label: string, value: string, isNew = false) =>
+    h('div', { class: 'res-stat' }, h('div', { class: 'res-label' }, label), h('div', { class: 'res-value' }, value, isNew ? h('span', { class: 'new-badge' }, 'NEW BEST') : null));
+  const last = r.realms[r.realms.length - 1];
+  let after = onHub;
+  const content = h(
+    'div',
+    { class: 'results' },
+    h('div', { class: 'res-title' }, r.finished ? '🌌 YOU ATE THE GALAXY!' : `${last.icon} ${last.name.toUpperCase()}`),
+    h('div', { class: 'res-sub' }, r.finished ? 'Cosmos · from a quark to the Milky Way' : 'Cosmos · journey over'),
+    h(
+      'div',
+      { class: 'cosmos-splits' },
+      ...r.realms.map((m, i) =>
+        h('div', { class: `cosmos-split${i === r.realms.length - 1 ? ' last' : ''}` }, h('span', null, `${m.icon} ${m.name}`), h('span', null, formatDuration(m.split))),
+      ),
+    ),
+    h(
+      'div',
+      { class: 'res-grid' },
+      h('div', { class: 'res-stat big' }, h('div', { class: 'res-label' }, 'Biggest bite'), h('div', { class: 'res-biggest' }, r.biggestImg ? h('img', { src: r.biggestImg, alt: '' }) : null, r.biggestName || '—')),
+      stat(r.finished ? 'Journey time' : 'Time played', formatDuration(r.time), r.bestTime),
+      stat('Furthest', `${last.icon} ${last.name}`, r.bestRealm),
+      stat('Hole size', r.size),
+      stat('Best combo', `×${r.combo}`),
+      stat('Objects', formatNumber(r.eaten)),
+    ),
+    h(
+      'div',
+      { class: 'modal-actions' },
+      h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Hub'),
+      h(
+        'button',
+        {
+          class: 'btn primary',
+          onclick: () => {
+            after = onAgain;
+            m.close();
+          },
+        },
+        'New journey ▶',
+      ),
+    ),
+  );
+  // Focus stays on the box, as on the round results: a late Space or gamepad A must not skip it.
+  const m = modal(content, { cls: 'results-modal', dismissable: false, onClose: () => after(), focusBox: true });
+}
+
+/** The Cosmos finish line; the first time it also hands over the Big Bang skin. */
+export function showCosmosComplete(r: { first: boolean; time: string }, onClose: () => void): void {
+  const m = modal(
+    h(
+      'div',
+      { class: 'results' },
+      h('div', { class: 'offline-icon' }, '🌌'),
+      h('div', { class: 'res-title' }, 'THE WHOLE GALAXY!'),
+      h('p', { class: 'modal-text' }, `From a speck smaller than a quark to swallowing the Milky Way, in ${r.time}.`),
+      r.first ? h('div', { class: 'res-bonus' }, '🏆 New trophy and the Big Bang skin!') : null,
       h('button', { class: 'btn primary big', onclick: () => m.close() }, 'Continue'),
     ),
     { cls: 'results-modal', dismissable: false, onClose, focusBox: true },

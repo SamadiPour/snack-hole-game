@@ -1,4 +1,4 @@
-import type { MapId } from '../../config/balance';
+import type { WorldId } from '../../config/cosmos';
 import { OBJECT_TYPES, TYPE_INDEX, distToSolid, footprintOf, solidShape, type SolidShape } from '../../config/objects';
 import { Rng } from '../rng';
 import { SpatialGrid } from '../spatial';
@@ -10,7 +10,9 @@ export interface MoveGraph {
 
 export type MoveSpec =
   | { kind: 'graph'; graph: number; lane: number; speed: number; flee?: boolean; from: number; to: number }
-  | { kind: 'wander'; x0: number; x1: number; z0: number; z1: number; speed: number; flee?: boolean };
+  | { kind: 'wander'; x0: number; x1: number; z0: number; z1: number; speed: number; flee?: boolean }
+  /** Circles (cx, cz) at its spawn distance, `speed` radians per second (negative: clockwise). */
+  | { kind: 'orbit'; cx: number; cz: number; speed: number; flee?: boolean };
 
 export interface Spawn {
   type: string;
@@ -34,10 +36,23 @@ export interface MapTheme {
   hemiSky: string;
   hemiGround: string;
   sunIntensity: number;
+  /** Cosmos realms: drifting specks near the camera for depth (render/motes.ts). */
+  motes?: MoteStyle;
+}
+
+/** Floating motes for a Cosmos realm: colours, count, size (fraction of the view), drift and rise (units/s at size 1). */
+export interface MoteStyle {
+  colors: string[];
+  count: number;
+  size: number;
+  drift: number;
+  rise: number;
+  /** 0..1: how much each mote flickers. */
+  twinkle: number;
 }
 
 export interface MapData {
-  id: MapId;
+  id: WorldId;
   size: number;
   half: number;
   base: string;
@@ -122,7 +137,7 @@ export class MapBuilder {
   private maxSolid = 1;
 
   constructor(
-    readonly id: MapId,
+    readonly id: WorldId,
     readonly size: number,
     seed: number,
   ) {
@@ -301,6 +316,11 @@ export class MapBuilder {
     this.graphs.push({ nodes, adj });
     this.links.push(links);
     return this.graphs.length - 1;
+  }
+
+  /** Puts a mover circling (cx, cz) at distance `r`, starting at angle `phase`, `speed` rad/s. */
+  orbiter(type: string, cx: number, cz: number, r: number, phase: number, speed: number, opts: { tint?: number; scale?: number } = {}): void {
+    this.put(type, cx + Math.cos(phase) * r, cz + Math.sin(phase) * r, 0, { tint: opts.tint, scale: opts.scale, move: { kind: 'orbit', cx, cz, speed } });
   }
 
   /** Puts a graph mover at a random edge of the given graph. */

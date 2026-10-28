@@ -424,6 +424,16 @@ export class Audio {
     [0, 7, 12, 19, 24].forEach((s, i) => this.tone(220 * Math.pow(2, s / 12), 'sine', t + 2.2 + i * 0.1, 0.1, 0.01, 1.2));
   }
 
+  /** Cosmos flip: a rising whoosh into a wide, bright chord (the world shrinking away below you). */
+  scaleUp(): void {
+    const ctx = this.fx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    this.noise(t, 1.1, 0.16, 400, 1.5, 5000, 'bandpass');
+    this.tone(110, 'sawtooth', t, 0.05, 0.6, 0.6, 440);
+    [0, 7, 12, 16, 19].forEach((s, i) => this.tone(262 * Math.pow(2, s / 12), 'sine', t + 0.55 + i * 0.05, 0.07, 0.02, 1.6));
+  }
+
   /** One songbird phrase: a few quick chirps, sweeping up, down, or a short trill. */
   private bird(t: number): void {
     const ctx = this.ctx;
@@ -561,7 +571,7 @@ export class Audio {
     src.start();
     lfo.start();
     this.ambientNodes.push(src, f, g, lfo, lfoGain, lfoF);
-    if (style === 'moon') {
+    if (style === 'moon' || style === 'solar' || style === 'galaxy') {
       const o = ctx.createOscillator();
       o.type = 'sine';
       o.frequency.value = 55;
@@ -583,12 +593,24 @@ const BEDS: Record<string, { freq: number; gain: number; rate: number; depth: nu
   airport: { freq: 300, gain: 0.35, rate: 0.08, depth: 0.25, sweep: 0.1 },
   spaceport: { freq: 460, gain: 0.3, rate: 0.1, depth: 0.5, sweep: 0.3 },
   moon: { freq: 140, gain: 0.35, rate: 0.08, depth: 0.15, sweep: 0.1 },
+  // Cosmos realms: a hiss and fizz small, wind and surf in the middle, a deep hum in space.
+  quantum: { freq: 900, gain: 0.16, rate: 0.23, depth: 0.6, sweep: 0.6 },
+  atomic: { freq: 620, gain: 0.18, rate: 0.17, depth: 0.5, sweep: 0.5 },
+  molecular: { freq: 480, gain: 0.24, rate: 0.12, depth: 0.6, sweep: 0.4 },
+  microbial: { freq: 300, gain: 0.26, rate: 0.09, depth: 0.7, sweep: 0.35 },
+  garden: { freq: 420, gain: 0.24, rate: 0.07, depth: 0.45, sweep: 0.3 },
+  hometown: { freq: 400, gain: 0.3, rate: 0.08, depth: 0.3, sweep: 0.2 },
+  earth: { freq: 260, gain: 0.32, rate: 0.05, depth: 0.6, sweep: 0.4 },
+  solar: { freq: 120, gain: 0.33, rate: 0.06, depth: 0.2, sweep: 0.1 },
+  galaxy: { freq: 100, gain: 0.33, rate: 0.05, depth: 0.25, sweep: 0.15 },
 };
 
 /** Occasional ambient one-shots: seconds between them. */
 const CRITTERS: Record<string, { kind: 'bird' | 'gull'; min: number; max: number }> = {
   farm: { kind: 'bird', min: 1.2, max: 4.5 },
   suburb: { kind: 'bird', min: 3, max: 8 },
+  garden: { kind: 'bird', min: 2, max: 6 },
+  hometown: { kind: 'bird', min: 3, max: 8 },
   harbor: { kind: 'gull', min: 5, max: 12 },
   spaceport: { kind: 'gull', min: 7, max: 16 },
 };

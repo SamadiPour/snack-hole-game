@@ -1,7 +1,9 @@
 import type { MapId } from '../../config/balance';
 import { MAPS } from '../../config/balance';
+import { isRealmId, type WorldId } from '../../config/cosmos';
 import type { MapData } from './builder';
 import { generateAirport } from './airport';
+import { generateRealm } from './cosmos';
 import { generateDowntown } from './downtown';
 import { generateFarm } from './farm';
 import { generateHarbor } from './harbor';
@@ -32,6 +34,11 @@ export function generateMap(id: MapId): MapData {
     cache.set(id, m);
   }
   return m;
+}
+
+/** The map for any world: a classic map or a Cosmos realm. */
+export function generateWorld(id: WorldId): MapData {
+  return isRealmId(id) ? generateRealm(id) : generateMap(id);
 }
 
 export type { MapData } from './builder';

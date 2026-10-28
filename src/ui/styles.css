@@ -176,6 +176,17 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1033; fon
 @keyframes bump { 40% { transform: scale(1.1); } }
 .hud-pct { background: rgba(20, 10, 50, .55); color: #fff; padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 800; }
 .hud-pause { width: 44px; height: 44px; font-size: 17px; }
+/* Cosmos: powers-of-ten bar under the timer, a quark (left) to the galaxy (right). */
+.hud-scale { position: absolute; left: 50%; transform: translateX(-50%); top: 58px; width: min(46vw, 420px); padding: 5px 16px 7px; border-radius: 999px; background: rgba(20, 10, 50, .55); pointer-events: none; }
+.hud-scale-inner { position: relative; height: 24px; }
+.hud-scale-track { position: absolute; left: 0; right: 0; top: 19px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .22); overflow: hidden; }
+.hud-scale-fill { height: 100%; width: 0; background: linear-gradient(90deg, #b48cff, #5fd8ff, #7be08a, #ffd23d, #ff8ad8); box-shadow: 0 0 6px #fff; }
+.hud-scale-icon { position: absolute; top: 0; transform: translateX(-50%); font-size: 14px; line-height: 16px; opacity: .45; filter: grayscale(1); transition: opacity .4s, filter .4s; }
+.hud-scale-icon.on { opacity: 1; filter: none; }
+.cosmos-splits { display: grid; gap: 2px; margin: 10px auto 0; max-width: 320px; font-size: 13px; font-weight: 800; }
+.cosmos-split { display: flex; justify-content: space-between; gap: 12px; padding: 3px 10px; border-radius: 8px; background: rgba(120, 90, 200, .08); font-variant-numeric: tabular-nums; }
+.cosmos-split.last { background: rgba(120, 90, 200, .2); }
+.cosmos-records { margin: -4px 0 8px; }
 .pause { text-align: center; min-width: 260px; }
 .pause .btn.big { margin: 6px 0 4px; }
 .hud-combo { position: absolute; top: calc(76px + var(--sat)); left: 50%; transform: translateX(-50%) scale(.6); opacity: 0; text-align: center; transition: opacity .2s, transform .2s; }
@@ -315,6 +326,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1033; fon
   .play-info { font-size: 12px; }
   .hud-top { top: calc(8px + var(--sat)); left: calc(8px + var(--sal)); right: calc(8px + var(--sar)); }
   .hud-timer { font-size: 22px; padding: 4px 14px; min-width: 80px; top: 52px; }
+  .hud-scale { top: 90px; width: 72vw; }
+  .mode-btn { padding: 6px 11px; font-size: 13px; }
   .hud-size { padding: 4px 10px 4px 4px; }
   .size-ring { width: 40px; height: 40px; }
   .size-num { width: 31px; height: 31px; font-size: 14px; }

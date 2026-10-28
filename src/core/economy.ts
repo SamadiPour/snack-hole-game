@@ -33,7 +33,8 @@ import {
   type UpgradeDef,
   type UpgradeId,
 } from '../config/balance';
-import { OBJECT_TYPES, type GulpSet } from '../config/objects';
+import type { WorldId } from '../config/cosmos';
+import { GULPEDIA_TYPES, type GulpSet } from '../config/objects';
 import { generateMap } from './mapgen';
 import { spawnLevel } from './mapgen/ladder';
 import { defaultSave, type SaveData } from './save';
@@ -91,8 +92,9 @@ export function magnetRangeFrac(level: number): number {
   return level <= 0 ? 0 : MAGNET.rangeBase + MAGNET.rangePerLevel * level;
 }
 
-export function magnetPull(radius: number, level: number): number {
-  return (MAGNET.pullBase + MAGNET.pullPerRadius * radius) * (1 + MAGNET.pullPerLevel * level);
+/** `k` scales the constant term, as in holeSpeed. */
+export function magnetPull(radius: number, level: number, k = 1): number {
+  return (MAGNET.pullBase * k + MAGNET.pullPerRadius * radius) * (1 + MAGNET.pullPerLevel * level);
 }
 
 export function goldChance(level: number): number {
@@ -177,11 +179,11 @@ export function isUpgradeVisible(save: SaveData, d: UpgradeDef): boolean {
 // ---------------------------------------------------------------- bonuses
 
 export function gulpSetTypes(set: GulpSet): string[] {
-  return OBJECT_TYPES.filter((t) => t.set === set).map((t) => t.id);
+  return GULPEDIA_TYPES.filter((t) => t.set === set).map((t) => t.id);
 }
 
 export function completedSets(save: SaveData): GulpSet[] {
-  const sets = [...new Set(OBJECT_TYPES.map((t) => t.set))];
+  const sets = [...new Set(GULPEDIA_TYPES.map((t) => t.set))];
   return sets.filter((s) => gulpSetTypes(s).every((id) => (save.gulpedia[id] ?? 0) > 0));
 }
 
@@ -430,10 +432,22 @@ export interface AbilityConfig {
   cooldown: number;
 }
 
+/** A Cosmos round's realm (index into REALMS) and the size level that flips to the next one. */
+export interface CosmosRound {
+  realm: number;
+  goal: number;
+}
+
 export interface RoundConfig {
-  mapId: MapId;
-  /** Casual Tour round (core/tour.ts): no timer, and the hole grows to reach what is left instead of snacking out. */
+  mapId: WorldId;
+  /** No timer and no cash: Tour (core/tour.ts) and Cosmos (core/cosmos.ts) rounds. */
   casual: boolean;
+  /** Tour: once what is left cannot pay for a size level, the hole grows for free (World catch-up). */
+  catchUp: boolean;
+  /** Random events (rush hour, UFO, stampede) roll at round start. */
+  events: boolean;
+  /** Cosmos journey: no early end, and the realm flips at its goal size. Null in other modes. */
+  cosmos: CosmosRound | null;
   /** The map was cleared (100%) in an earlier round. */
   mapCleared: boolean;
   mapMul: number;
@@ -490,6 +504,9 @@ export function buildRoundConfig(save: SaveData, mapId: MapId = save.selectedMap
   return {
     mapId,
     casual: false,
+    catchUp: false,
+    events: true,
+    cosmos: null,
     mapCleared: save.map100[mapId],
     mapMul: mapDef(mapId).valueMul * tierCostMul(save.tier),
     roundTime: roundTimeFor(save),

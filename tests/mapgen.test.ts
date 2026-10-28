@@ -46,7 +46,8 @@ function spawnHash(m: MapData): string {
     mix(`${s.type},${s.x},${s.z},${s.rot},${s.scale},${s.tint}`);
     const mv = s.move;
     if (mv?.kind === 'graph') mix(`|g${mv.graph},${mv.lane},${mv.speed},${mv.from},${mv.to},${!!mv.flee}`);
-    else if (mv) mix(`|w${mv.x0},${mv.x1},${mv.z0},${mv.z1},${mv.speed},${!!mv.flee}`);
+    else if (mv?.kind === 'wander') mix(`|w${mv.x0},${mv.x1},${mv.z0},${mv.z1},${mv.speed},${!!mv.flee}`);
+    else if (mv) mix(`|o${mv.cx},${mv.cz},${mv.speed}`);
     mix(';');
   }
   return (h >>> 0).toString(16).padStart(8, '0');

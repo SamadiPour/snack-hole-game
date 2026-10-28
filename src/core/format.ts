@@ -71,3 +71,27 @@ export function formatPercent(frac: number, digits = 1): string {
   if (p >= 99.95 && p < 100) return (99.9).toFixed(digits) + '%';
   return p.toFixed(digits) + '%';
 }
+
+const LIGHT_YEAR = 9.4607e15;
+const AU = 1.496e11;
+/** Length units from the biggest down, with the share of a unit from which each is used. */
+const LENGTHS: [number, string, number][] = [
+  [LIGHT_YEAR, 'ly', 0.1],
+  [AU, 'AU', 0.1],
+  [1e3, 'km', 1],
+  [1, 'm', 1],
+  [1e-2, 'cm', 1],
+  [1e-3, 'mm', 1],
+  [1e-6, 'µm', 1],
+  [1e-9, 'nm', 1],
+  [1e-12, 'pm', 1],
+  [1e-15, 'fm', 1],
+  [1e-18, 'am', 0],
+];
+
+/** A real length for Cosmos, from attometres to light years: "3.2 nm", "870 km", "12,000 ly". */
+export function formatLength(m: number): string {
+  const [u, name] = LENGTHS.find(([unit, , from]) => m >= unit * from) ?? LENGTHS[LENGTHS.length - 1];
+  const v = m / u;
+  return `${v.toLocaleString('en-US', { maximumFractionDigits: v < 10 ? 1 : 0 })} ${name}`;
+}

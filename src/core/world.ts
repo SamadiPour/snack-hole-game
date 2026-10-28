@@ -1,4 +1,5 @@
 import { ABILITIES, ABILITY_LEVEL, GOLDEN, HELPERS, MAP_CLEARED_FRACTION, ROUND_END, SIZE, TOUR, type AbilityId } from '../config/balance';
+import { COSMOS } from '../config/cosmos';
 import { OBJECT_TYPES, baseValueOf, distToSolid, footprintOf, solidShape, typeId, xpOf } from '../config/objects';
 import {
   comboMult,
@@ -10,6 +11,7 @@ import {
   radiusForLevel,
   timeBonusFrac,
   xpForLevel,
+  type CosmosRound,
   type RoundConfig,
 } from './economy';
 import type { MapData } from './mapgen/builder';
@@ -31,6 +33,8 @@ export const MV_GRAPH = 1;
 export const MV_WANDER = 2;
 /** Straight run to (tx, tz), then leave the stage (stampedes, UFO fly-by). */
 export const MV_RUN = 3;
+/** Circles (tx, tz) at radius x0, `speed` radians per second (planets, electrons). */
+export const MV_ORBIT = 4;
 
 /** A prop in the world. Plain mutable class so V8 keeps one hidden shape. */
 export class WObj {
@@ -100,6 +104,8 @@ export class WObj {
   fly = false;
   /** Falling from the sky (UFO drops). */
   dropVy = 0;
+  /** Left over from the Cosmos realm before, a scale smaller: no size hints, no blocking. */
+  crumb = false;
 }
 
 export class WHole {
@@ -134,6 +140,8 @@ export type WEvent =
   | { k: 'snackedOut'; bonusFrac: number }
   /** Casual round where nothing left can grow the hole: it grows a level for free (a `level` follows). */
   | { k: 'catchUp' }
+  /** Cosmos: the hole reached the realm's goal (or can no longer reach it): flip to the next realm. */
+  | { k: 'realmUp' }
   | { k: 'end' };
 
 export type EndReason = 'timeUp' | 'cleared' | 'snackedOut';
@@ -228,7 +236,8 @@ export class World {
   readonly movers: WObj[] = [];
   readonly falling: WObj[] = [];
   readonly holes: WHole[] = [];
-  readonly grid: SpatialGrid<WObj>;
+  /** Replaced by rebase (Cosmos), like `map`. */
+  grid: SpatialGrid<WObj>;
   readonly events: WEvent[] = [];
   readonly rng: Rng;
   readonly abilities: Record<AbilityId, AbilityState> = {
@@ -251,6 +260,20 @@ export class World {
   private reachCheck = 0;
   /** Casual rounds: seconds catch-up has waited for the props the current size brought within reach. */
   private catchUpWait = 0;
+  /**
+   * Multiplies the constant terms of the size formulas (hole speed, magnet pull, flee distance,
+   * fall gravity; the renderer's camera and hole wall too). A Cosmos flip scales the world by z, so
+   * it drops to z there, which keeps the picture identical, and eases back to 1 with the camera.
+   */
+  affine = 1;
+  /** Cosmos: `realmUp` was sent and the flip has not happened yet. */
+  realmPending = false;
+  /** Cosmos: seconds the goal has been out of reach (see COSMOS.safetyPatience). */
+  private safetyWait = 0;
+  /** Cosmos: realms that flipped through the safety net instead of the goal (the sim reports it). */
+  safetyFlips = 0;
+  /** The block raster indexes the current map's spawns, which start here in `objects` after a rebase. */
+  private blockBase = 0;
   /** Objects sorted by footprint, for reachableLeft. */
   private bySize: WObj[] = [];
   /** Map props grouped by type, each sorted by footprint, for nextSnack. `i` skips eaten ones. */
@@ -273,7 +296,7 @@ export class World {
   /** Golden props (for sparkles). */
   readonly golden: WObj[] = [];
   goldEaten = 0;
-  private readonly block: BlockMap;
+  private block: BlockMap;
   private readonly roundEvents: RoundEvents;
   /** Static props the magnet moved during a grid query; re-filed after it so none is visited twice. */
   private readonly pulled: WObj[] = [];
@@ -281,7 +304,7 @@ export class World {
   private readonly roads: WObj[] = [];
 
   constructor(
-    readonly map: MapData,
+    public map: MapData,
     readonly cfg: RoundConfig,
     readonly opts: WorldOptions = {},
   ) {
@@ -292,45 +315,10 @@ export class World {
     // Each ability starts the round `startCharge` charged: Dash ready, Vortex and Mega Mouth empty.
     for (const a of ABILITIES) this.abilities[a.id].cd = cfg.abilities[a.id].cooldown * (1 - a.startCharge);
 
-    for (const s of map.spawns) {
-      const o = this.initObj(s.type, s.scale, s.tint);
-      o.x = s.x;
-      o.z = s.z;
-      o.rot = s.rot;
-      // Map % is weighted by ground area, so landmarks count for more than a pile of cones.
-      o.w = o.f * o.f;
-      this.weightTotal += o.w;
-      this.maxF = Math.max(this.maxF, o.f);
-      const mv = s.move;
-      if (mv) {
-        o.speed = mv.speed;
-        o.flee = !!mv.flee;
-        o.bob = this.rng.range(0, 10);
-        if (mv.kind === 'graph') {
-          o.mv = MV_GRAPH;
-          o.graph = mv.graph;
-          o.lane = mv.lane;
-          o.from = mv.from;
-          o.to = mv.to;
-          this.initGraphMover(o);
-        } else {
-          o.mv = MV_WANDER;
-          o.x0 = mv.x0;
-          o.x1 = mv.x1;
-          o.z0 = mv.z0;
-          o.z1 = mv.z1;
-          o.tx = o.x;
-          o.tz = o.z;
-          o.wait = this.rng.range(0, 2);
-        }
-        this.movers.push(o);
-      } else {
-        this.grid.insert(o);
-      }
-    }
+    this.addSpawns(map);
 
     this.roundEvents = new RoundEvents(this);
-    if (!opts.demo) this.roundEvents.setup();
+    if (!opts.demo && cfg.events) this.roundEvents.setup();
     for (const o of this.objects) {
       if (o.gold || this.rng.next() >= cfg.goldChance) continue;
       this.makeGolden(o);
@@ -354,6 +342,52 @@ export class World {
       h.baseR = h.r = cfg.helperRadius;
       h.think = i * 0.1;
       this.holes.push(h);
+    }
+  }
+
+  /** A prop for every spawn of `map`, appended to `objects` (the constructor's map, or a Cosmos realm's). */
+  private addSpawns(map: MapData): void {
+    for (const s of map.spawns) {
+      const o = this.initObj(s.type, s.scale, s.tint);
+      o.x = s.x;
+      o.z = s.z;
+      o.rot = s.rot;
+      // Map % is weighted by ground area, so landmarks count for more than a pile of cones.
+      o.w = o.f * o.f;
+      this.weightTotal += o.w;
+      this.maxF = Math.max(this.maxF, o.f);
+      const mv = s.move;
+      if (mv) {
+        o.speed = mv.speed;
+        o.flee = !!mv.flee;
+        o.bob = this.rng.range(0, 10);
+        if (mv.kind === 'graph') {
+          o.mv = MV_GRAPH;
+          o.graph = mv.graph;
+          o.lane = mv.lane;
+          o.from = mv.from;
+          o.to = mv.to;
+          this.initGraphMover(o);
+        } else if (mv.kind === 'orbit') {
+          o.mv = MV_ORBIT;
+          o.tx = mv.cx;
+          o.tz = mv.cz;
+          o.x0 = Math.hypot(s.x - mv.cx, s.z - mv.cz);
+          o.phase = Math.atan2(s.z - mv.cz, s.x - mv.cx);
+        } else {
+          o.mv = MV_WANDER;
+          o.x0 = mv.x0;
+          o.x1 = mv.x1;
+          o.z0 = mv.z0;
+          o.z1 = mv.z1;
+          o.tx = o.x;
+          o.tz = o.z;
+          o.wait = this.rng.range(0, 2);
+        }
+        this.movers.push(o);
+      } else {
+        this.grid.insert(o);
+      }
     }
   }
 
@@ -469,7 +503,7 @@ export class World {
     if (!this.byType) {
       const groups = new Map<number, WObj[]>();
       for (const o of this.objects) {
-        if (o.event) continue;
+        if (o.event || o.crumb) continue;
         const g = groups.get(o.t);
         if (g) g.push(o);
         else groups.set(o.t, [o]);
@@ -584,7 +618,7 @@ export class World {
     if (i < 0 || j < 0 || i >= b.n || j >= b.n) return false;
     const v = b.cells[i + j * b.n];
     if (v === 0) return false;
-    return v < 0 || this.objects[v - 1].state === ALIVE;
+    return v < 0 || this.objects[this.blockBase + v - 1].state === ALIVE;
   }
 
   private moveToward(o: WObj, speed: number, dt: number, avoid = false): number {
@@ -623,12 +657,23 @@ export class World {
       this.roundEvents.updateRunner(o, dt);
       return;
     }
+    if (o.mv === MV_ORBIT) {
+      o.phase += o.speed * dt;
+      const c = Math.cos(o.phase);
+      const sn = Math.sin(o.phase);
+      o.x = o.tx + c * o.x0;
+      o.z = o.tz + sn * o.x0;
+      // Face along the path (front is +X).
+      o.rot = Math.sign(o.speed) >= 0 ? Math.atan2(-c, -sn) : Math.atan2(c, sn);
+      o.dirty = true;
+      return;
+    }
     const main = this.main;
     // Small things panic and run from a hole that can eat them.
     if (o.flee && o.f <= SIZE.fit * main.r) {
       const dx = o.x - main.x;
       const dz = o.z - main.z;
-      const fr = main.r * 2.2 + 3;
+      const fr = main.r * 2.2 + 3 * this.affine;
       const d2 = dx * dx + dz * dz;
       if (d2 < fr * fr && d2 > 1e-6) {
         const d = Math.sqrt(d2);
@@ -696,7 +741,7 @@ export class World {
       ix /= mag;
       iz /= mag;
     }
-    let speed = holeSpeed(h.baseR, this.cfg.speedMult);
+    let speed = holeSpeed(h.baseR, this.cfg.speedMult, this.affine);
     if (dash) {
       speed *= ABILITY_LEVEL.dashSpeed;
       if (mag < 0.2) {
@@ -776,7 +821,7 @@ export class World {
       const vortex = this.abilities.vortex.active > 0;
       const frac = magnetRangeFrac(this.cfg.magnetLevel) + (vortex ? ABILITY_LEVEL.vortexRange : 0);
       magR = H.baseR * frac;
-      pull = magnetPull(H.baseR, this.cfg.magnetLevel) * (vortex ? ABILITY_LEVEL.vortexPull : 1);
+      pull = magnetPull(H.baseR, this.cfg.magnetLevel, this.affine) * (vortex ? ABILITY_LEVEL.vortexPull : 1);
     }
     const wobR = H.main ? Math.min(this.maxF, 2.5 * R + 6) * 0.8 : 0;
     const qr = R + Math.max(magR, wobR);
@@ -825,7 +870,24 @@ export class World {
     }
   }
 
-  private swallow(o: WObj, hi: number, dx: number, dz: number): void {
+  /**
+   * Cosmos finale: everything left falls into the main hole, the far props a little later, with no
+   * `eat` events (a few thousand gulps in one frame would be noise).
+   */
+  swallowAll(): void {
+    const H = this.main;
+    // The hole swells as the galaxy pours in.
+    H.baseR *= 2.5;
+    for (const o of this.objects) {
+      if (o.state !== ALIVE) continue;
+      const dx = o.x - H.x;
+      const dz = o.z - H.z;
+      this.swallow(o, 0, dx, dz, true);
+      o.ft = -Math.hypot(dx, dz) / 160;
+    }
+  }
+
+  private swallow(o: WObj, hi: number, dx: number, dz: number, quiet = false): void {
     o.state = FALLING;
     o.hole = hi;
     o.ox = dx;
@@ -856,6 +918,10 @@ export class World {
     this.weightEaten += o.w;
     this.eatenByType.set(o.t, (this.eatenByType.get(o.t) ?? 0) + 1);
     if (o.gold) this.goldEaten++;
+    if (quiet) {
+      this.eaten++;
+      return;
+    }
 
     const H = this.holes[hi];
     let cash: number;
@@ -885,6 +951,33 @@ export class World {
     for (let l = from + 1; l <= h.level; l++) this.events.push({ k: 'level', level: l });
     this.levelsGained += h.level - from;
     h.baseR = radiusForLevel(h.level);
+    const c = this.cfg.cosmos;
+    if (c && !this.opts.demo && h.level >= c.goal) this.flagRealmUp();
+  }
+
+  /** Cosmos: tells the game to flip to the next realm (once until the flip happens). */
+  private flagRealmUp(): void {
+    if (this.realmPending) return;
+    this.realmPending = true;
+    this.events.push({ k: 'realmUp' });
+  }
+
+  /**
+   * Cosmos safety net, checked every ROUND_END.checkEvery seconds. It never grows the hole: when
+   * everything left could not take it to the goal for COSMOS.safetyPatience seconds, the realm flips
+   * anyway, so a run cannot get stuck. Realm layouts are built (and tested) so this never fires.
+   */
+  private checkReachGoal(goal: number): void {
+    if (this.realmPending) return;
+    if (this.main.level + this.reachable().levels >= goal) {
+      this.safetyWait = 0;
+      return;
+    }
+    this.safetyWait += ROUND_END.checkEvery;
+    if (this.safetyWait < COSMOS.safetyPatience) return;
+    this.safetyWait = 0;
+    this.safetyFlips++;
+    this.flagRealmUp();
   }
 
   /**
@@ -935,13 +1028,13 @@ export class World {
       o.oz *= k;
       o.tilt = Math.min(1.35, o.tilt + dt * 3.4);
       if (o.ft > 0.08) {
-        o.vy += (14 + 5 * H.r) * dt;
+        o.vy += (14 * this.affine + 5 * H.r) * dt;
         o.y -= o.vy * dt;
       }
       o.x = H.x + o.ox;
       o.z = H.z + o.oz;
       o.dirty = true;
-      if (o.y < o.baseY - (o.h * 1.1 + H.r * 1.3 + 1) || o.ft > 3.5) {
+      if (o.y < o.baseY - (o.h * 1.1 + H.r * 1.3 + this.affine) || o.ft > 3.5) {
         o.state = GONE;
         f[i] = f[f.length - 1];
         f.pop();
@@ -949,22 +1042,141 @@ export class World {
     }
   }
 
+  // ------------------------------------------------------------ Cosmos flip
+  /**
+   * Moves this world into the next Cosmos realm in place: everything shrinks by `z` around the old
+   * origin, which lands on (nx, nz) of `next`, and `next`'s props join. Every surviving prop and hole
+   * stays the same object (falling props keep falling, the bot's target stays valid), so the
+   * picture before and after is identical once the renderer is rebased the same way. The hole drops
+   * `dLevel` size levels, which matches z, and keeps its share of the next level's XP. Leftovers
+   * become crumbs; crumbs from the realm before, and anything below COSMOS.minCrumb, are dropped.
+   * Returns how many props were carried over: the new realm's props start at that index.
+   */
+  rebase(next: MapData, z: number, nx: number, nz: number, dLevel: number, cosmos: CosmosRound, maxLevel: number): number {
+    for (const h of this.holes) {
+      h.x = nx + h.x * z;
+      h.z = nz + h.z * z;
+      h.tx = nx + h.tx * z;
+      h.tz = nz + h.tz * z;
+      h.vx *= z;
+      h.vz *= z;
+      h.r *= z;
+      if (h.main) {
+        // XP piled up at the size cap (waiting for the flip) must not chain into further flips.
+        const share = Math.min(0.95, h.xp / xpForLevel(h.level));
+        h.level = Math.max(0, h.level - dLevel);
+        h.baseR = radiusForLevel(h.level);
+        h.xp = share * xpForLevel(h.level);
+      } else h.baseR *= z;
+    }
+
+    const kept: WObj[] = [];
+    this.movers.length = 0;
+    for (const o of this.objects) {
+      if (o.state === GONE || o.state === DORMANT) continue;
+      if (o.state === ALIVE && (o.crumb || o.f * z < COSMOS.minCrumb)) {
+        o.state = GONE;
+        o.dirty = true;
+        continue;
+      }
+      o.x = nx + o.x * z;
+      o.z = nz + o.z * z;
+      o.y *= z;
+      o.baseY *= z;
+      o.s *= z;
+      o.f *= z;
+      o.h *= z;
+      o.xp *= z * z;
+      o.w *= z * z;
+      o.value *= z;
+      o.ox *= z;
+      o.oz *= z;
+      o.vy *= z;
+      o.dropVy *= z;
+      if (o.state === ALIVE) {
+        o.crumb = true;
+        if (o.mv === MV_WANDER) {
+          o.x0 = nx + o.x0 * z;
+          o.x1 = nx + o.x1 * z;
+          o.z0 = nz + o.z0 * z;
+          o.z1 = nz + o.z1 * z;
+          o.tx = nx + o.tx * z;
+          o.tz = nz + o.tz * z;
+          o.speed *= z;
+          this.movers.push(o);
+        } else if (o.mv === MV_ORBIT) {
+          // Same angular speed: the orbit shrinks with everything else.
+          o.tx = nx + o.tx * z;
+          o.tz = nz + o.tz * z;
+          o.x0 *= z;
+          this.movers.push(o);
+        } else if (o.mv !== MV_NONE) {
+          // Road traffic needs its road graph, which stays behind: cars and runners stop.
+          o.mv = MV_NONE;
+          o.blocker = null;
+        }
+      }
+      o.cell = -1;
+      o.id = kept.length;
+      o.dirty = true;
+      kept.push(o);
+    }
+
+    this.objects.length = 0;
+    this.objects.push(...kept);
+    this.golden.length = 0;
+    this.map = next;
+    this.cfg.mapId = next.id;
+    this.cfg.cosmos = cosmos;
+    this.cfg.maxLevel = maxLevel;
+    this.grid = new SpatialGrid<WObj>(next.size, 8);
+    this.block = blockMapFor(next);
+    this.blockBase = kept.length;
+    // Map % and the occluder search start over for the new realm.
+    this.weightTotal = 0;
+    this.weightEaten = 0;
+    this.maxF = 1;
+    for (const o of kept) {
+      if (o.state !== ALIVE) continue;
+      this.weightTotal += o.w;
+      this.maxF = Math.max(this.maxF, o.f);
+      if (o.mv === MV_NONE) this.grid.insert(o);
+    }
+    this.addSpawns(next);
+    this.bySize = [];
+    this.byType = null;
+    // Biggest bites only compare within one scale.
+    this.biggest = null;
+    this.realmPending = false;
+    this.safetyWait = 0;
+    this.reachCheck = ROUND_END.checkEvery;
+    this.affine *= z;
+    return kept.length;
+  }
+
   // ------------------------------------------------------------ main step
   step(dt: number): void {
     this.time += dt;
+    if (this.affine !== 1) {
+      this.affine += (1 - this.affine) * (1 - Math.exp(-COSMOS.affineRate * dt));
+      if (Math.abs(1 - this.affine) < 1e-4) this.affine = 1;
+    }
     if (this.running && !this.opts.demo) {
       const before = Math.ceil(this.timeLeft);
       this.timeLeft -= dt;
       const after = Math.ceil(this.timeLeft);
       if (after < before && after <= 5 && after >= 1) this.events.push({ k: 'tick', s: after });
-      const cleared = this.weightEaten >= this.weightTotal * MAP_CLEARED_FRACTION;
+      const cosmos = this.cfg.cosmos;
+      // A Cosmos realm never ends the round: the game flips it to the next one at its goal.
+      const cleared = !cosmos && this.weightEaten >= this.weightTotal * MAP_CLEARED_FRACTION;
       let snackedOut = false;
       if (!cleared && this.timeLeft > 0) {
         this.reachCheck -= dt;
         if (this.reachCheck <= 0) {
           this.reachCheck = ROUND_END.checkEvery;
-          if (this.cfg.casual) {
-            // Casual rounds have no timer to end them: once what is left cannot grow the hole, it
+          if (cosmos) this.checkReachGoal(cosmos.goal);
+          else if (this.cfg.catchUp) {
+            // Tour rounds have no timer to end them: once what is left cannot grow the hole, it
             // grows for free, so the bigger props come within reach instead of a long crumb hunt.
             if (this.catchUpDue()) this.catchUp();
           } else if (!this.roundEvents.current && this.snackedOut() && !this.roundEvents.hurry()) {

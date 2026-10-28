@@ -22,6 +22,7 @@ export function tourRoundConfig(mapId: MapId): RoundConfig {
   return {
     ...buildRoundConfig(defaultSave(0), mapId),
     casual: true,
+    catchUp: true,
     roundTime: Infinity,
     startLevel: tourStartLevel(mapId),
     xpMult: 1,

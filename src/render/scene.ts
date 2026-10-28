@@ -1,12 +1,15 @@
 import * as THREE from 'three';
 import type { SkinDef } from '../config/balance';
+import { COSMOS } from '../config/cosmos';
+import type { Flip } from '../core/cosmos';
 import type { Quality } from '../core/save';
-import type { MapData } from '../core/mapgen/builder';
+import type { MapData, MapTheme } from '../core/mapgen/builder';
 import { ALIVE, type World } from '../core/world';
 import { DashTrail } from './dashTrail';
 import { Ground } from './ground';
 import { HoleView } from './holeView';
 import { MAX_HOLES, holeUniforms } from './materials';
+import { Motes } from './motes';
 import { reducedMotion } from './motion';
 import { ObjectsView } from './objectsView';
 import { Particles } from './particles';
@@ -22,6 +25,21 @@ const MIN_PIXEL_RATIO = 1;
  * screen, with 44% fewer pixels to shade than 2, which keeps them from running hot.
  */
 const AUTO_RATIO = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 1.5 : 2;
+
+/** Sky, fog and light colours of a map, for blending one into another. */
+interface Look {
+  sky: THREE.Color;
+  fog: THREE.Color;
+  hemiSky: THREE.Color;
+  hemiGround: THREE.Color;
+  sun: THREE.Color;
+  sunIntensity: number;
+}
+
+function lookOf(th: MapTheme): Look {
+  const c = (v: string) => new THREE.Color(v);
+  return { sky: c(th.sky), fog: c(th.fog), hemiSky: c(th.hemiSky), hemiGround: c(th.hemiGround), sun: c(th.sun), sunIntensity: th.sunIntensity };
+}
 
 const HELPER_SKIN: SkinDef = {
   id: 'helper',
@@ -50,6 +68,15 @@ export class GameRenderer {
   private hemi = new THREE.HemisphereLight(0xffffff, 0x888866, 1.4);
   private sun = new THREE.DirectionalLight(0xffffff, 2.2);
   private ground: Ground | null = null;
+  /** Cosmos: the ground of the realm just left, blending into the new one (COSMOS.groundBlend). */
+  private nest: { ground: Ground; t: number } | null = null;
+  /** Cosmos: sky, fog and lights blending from one realm's look to the next. */
+  private look: { from: Look; to: Look; t: number; dur: number } | null = null;
+  readonly motes = new Motes();
+  /** Cosmos: the ring sweeping out from the hole while the new realm's props appear. */
+  private wave: THREE.Mesh;
+  /** Cosmos finale: the galaxy's ground spirals into the hole at (x, z). */
+  private finale: { t: number; x: number; z: number } | null = null;
   private holeViews: HoleView[] = [];
   private map: MapData | null = null;
   private skin: SkinDef;
@@ -89,7 +116,14 @@ export class GameRenderer {
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.03;
     this.scene.add(this.hemi, this.sun, this.sun.target);
-    this.scene.add(this.objects.group, this.particles.points, this.dashTrail.group);
+    this.scene.add(this.objects.group, this.particles.points, this.dashTrail.group, this.motes.points);
+    const waveGeo = new THREE.RingGeometry(0.985, 1, 128);
+    waveGeo.rotateX(-Math.PI / 2);
+    this.wave = new THREE.Mesh(waveGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.wave.visible = false;
+    this.wave.renderOrder = 2;
+    this.wave.frustumCulled = false;
+    this.scene.add(this.wave);
     const beamGeo = new THREE.CylinderGeometry(0.6, 3.2, 1, 20, 1, true);
     beamGeo.translate(0, -0.5, 0);
     this.beam = new THREE.Mesh(
@@ -161,7 +195,8 @@ export class GameRenderer {
     this.objects.setShadows(on);
   }
 
-  setMap(map: MapData): void {
+  /** Ground, sky, fog, lights and motes for `map`; with `blend` seconds the sky, fog and lights blend over. */
+  setMap(map: MapData, blend = 0): void {
     if (this.map === map) return;
     this.map = map;
     if (this.ground) {
@@ -170,16 +205,71 @@ export class GameRenderer {
     }
     this.ground = new Ground(map);
     this.scene.add(this.ground.group);
-    const th = map.theme;
-    this.scene.background = new THREE.Color(th.sky);
-    this.scene.fog = new THREE.Fog(th.fog, 60, 300);
-    this.hemi.color.set(th.hemiSky);
-    this.hemi.groundColor.set(th.hemiGround);
-    this.sun.color.set(th.sun);
-    this.sun.intensity = th.sunIntensity;
+    const to = lookOf(map.theme);
+    if (blend > 0 && this.scene.background instanceof THREE.Color && this.scene.fog) {
+      const from: Look = {
+        sky: this.scene.background.clone(),
+        fog: (this.scene.fog as THREE.Fog).color.clone(),
+        hemiSky: this.hemi.color.clone(),
+        hemiGround: this.hemi.groundColor.clone(),
+        sun: this.sun.color.clone(),
+        sunIntensity: this.sun.intensity,
+      };
+      this.look = { from, to, t: 0, dur: blend };
+    } else {
+      this.look = null;
+      this.scene.background = to.sky.clone();
+      this.scene.fog = new THREE.Fog(to.fog, 60, 300);
+      this.applyLook(to, to, 1);
+    }
+    this.motes.setStyle(map.theme.motes ?? null, blend > 0 ? 1.5 : 0);
+    if (!blend) this.dropNest();
+  }
+
+  private applyLook(a: Look, b: Look, k: number): void {
+    (this.scene.background as THREE.Color).lerpColors(a.sky, b.sky, k);
+    (this.scene.fog as THREE.Fog).color.lerpColors(a.fog, b.fog, k);
+    this.hemi.color.lerpColors(a.hemiSky, b.hemiSky, k);
+    this.hemi.groundColor.lerpColors(a.hemiGround, b.hemiGround, k);
+    this.sun.color.lerpColors(a.sun, b.sun, k);
+    this.sun.intensity = a.sunIntensity + (b.sunIntensity - a.sunIntensity) * k;
+  }
+
+  private dropNest(): void {
+    if (!this.nest) return;
+    this.scene.remove(this.nest.ground.group);
+    this.nest.ground.dispose();
+    this.nest = null;
+  }
+
+  /**
+   * Cosmos flip, right after World.rebase: shrinks everything the renderer keeps in world units
+   * (camera, particles, dash rings) the same way, so this frame looks like the last one. The old
+   * realm's ground stays where it landed and blends into the new ground; the new realm's props
+   * appear behind a ring sweeping out from the hole; sky, fog and lights blend over.
+   */
+  rebase(world: World, flip: Flip): void {
+    const { z, nx, nz } = flip;
+    const old = this.map;
+    this.camTarget.set(nx + this.camTarget.x * z, 0, nz + this.camTarget.z * z);
+    this.camDist *= z;
+    this.particles.rebase(z, nx, nz);
+    this.dashTrail.rebase(z, nx, nz);
+    this.dropNest();
+    if (old) {
+      const g = new Ground(old, { color: world.map.base });
+      g.group.position.set(nx, 0, nz);
+      g.group.scale.set(z, 1, z);
+      this.scene.add(g.group);
+      this.nest = { ground: g, t: 0 };
+    }
+    this.setMap(world.map, COSMOS.themeBlend);
+    this.objects.grow(flip.carried, world.main.x, world.main.z);
+    (this.wave.material as THREE.MeshBasicMaterial).color.set(this.skin.glow);
   }
 
   setWorld(world: World): void {
+    this.finale = null;
     this.setMap(world.map);
     this.objects.setWorld(world, this.shadowsOn);
     while (this.holeViews.length < world.holes.length) {
@@ -235,11 +325,12 @@ export class GameRenderer {
     this.shakeAmt = Math.min(1.5, Math.max(this.shakeAmt, amount));
   }
 
-  private desiredDist(r: number): number {
+  /** `k` scales the constant term (World.affine, after a Cosmos flip). */
+  private desiredDist(r: number, k = 1): number {
     // Portrait screens see less horizontally; pull back so the hole keeps breathing room.
     const a = this.camera.aspect;
     const portrait = a < 1 ? Math.pow(1 / a, 0.6) : 1;
-    return (13 + 7.5 * r) * portrait;
+    return (13 * k + 7.5 * r) * portrait;
   }
 
   resize(): void {
@@ -252,6 +343,7 @@ export class GameRenderer {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.particles.setViewportHeight(h * ratio);
+    this.motes.setViewportHeight(h * ratio);
   }
 
   /** Screen position (CSS px) of a world point, or null when behind the camera. */
@@ -271,7 +363,7 @@ export class GameRenderer {
       for (let i = 0; i < n; i++) {
         const h = world.holes[i];
         holeUniforms.uHoles.value[i].set(h.x, h.z, h.r, 0);
-        this.holeViews[i]?.update(h.x, h.z, h.r, this.time, true, this.frameDt);
+        this.holeViews[i]?.update(h.x, h.z, h.r, this.time, true, this.frameDt, world.affine);
       }
       for (let i = n; i < this.holeViews.length; i++) this.holeViews[i].group.visible = false;
       holeUniforms.uFadeDepth.value = Math.max(2, world.main.r * 1.6);
@@ -292,9 +384,57 @@ export class GameRenderer {
       this.objects.cull(this.camera, shadowCam, this.camTarget.x, this.camTarget.z, this.camDist, this.time);
       this.objects.update(dt, this.time);
       this.syncMs += (performance.now() - ts - this.syncMs) * 0.05;
+      this.updateCosmos(dt);
     }
     this.particles.update(dt);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Cosmos finale: the ground swirls and shrinks into the hole while the camera pulls back. */
+  galaxyFinale(world: World): void {
+    this.finale = { t: 0, x: world.main.x, z: world.main.z };
+    this.zoomKick = 1;
+  }
+
+  /** Cosmos: sky/light blend, the old ground fading out, the reveal ring, the motes and the finale. */
+  private updateCosmos(dt: number): void {
+    const fin = this.finale;
+    if (fin && this.ground) {
+      fin.t += dt;
+      const k = Math.min(1, fin.t / COSMOS.finale);
+      const s = 1 - 0.98 * k * k * (3 - 2 * k);
+      const a = k * k * 6;
+      const g = this.ground.group;
+      g.rotation.y = a;
+      g.scale.set(s, 1, s);
+      // Keep (x, z) where it is: position = p - s * R(a) * p.
+      const c = Math.cos(a);
+      const sn = Math.sin(a);
+      g.position.set(fin.x - s * (c * fin.x + sn * fin.z), 0, fin.z - s * (-sn * fin.x + c * fin.z));
+      this.zoomKick = Math.max(this.zoomKick, 1);
+    }
+    const lk = this.look;
+    if (lk) {
+      lk.t += dt;
+      const k = Math.min(1, lk.t / lk.dur);
+      this.applyLook(lk.from, lk.to, k * k * (3 - 2 * k));
+      if (k >= 1) this.look = null;
+    }
+    const nest = this.nest;
+    if (nest) {
+      nest.t += dt;
+      const k = Math.min(1, nest.t / COSMOS.groundBlend);
+      nest.ground.setBlend(k * k * (3 - 2 * k));
+      if (k >= 1) this.dropNest();
+    }
+    const rv = this.objects.reveal;
+    this.wave.visible = !!rv;
+    if (rv) {
+      this.wave.position.set(rv.x, 0.04, rv.z);
+      this.wave.scale.set(Math.max(0.01, rv.r), 1, Math.max(0.01, rv.r));
+      (this.wave.material as THREE.MeshBasicMaterial).opacity = 0.85 * Math.exp(-rv.t * 1.1);
+    }
+    this.motes.update(dt, this.time, this.camTarget.x, this.camTarget.z, this.camDist);
   }
 
   /** Sparkles on golden props near the view, and the UFO's tractor beam. */
@@ -343,7 +483,7 @@ export class GameRenderer {
     let wantPitch: number;
     this.zoomKick *= Math.exp(-1.1 * dt);
     if (mode === 'round') {
-      const want = this.desiredDist(h.r) * (1 + 0.35 * this.zoomKick);
+      const want = this.desiredDist(h.r, world.affine) * (1 + 0.35 * this.zoomKick);
       this.camDist += (want - this.camDist) * (1 - Math.exp(-2 * dt));
       this.camTarget.x += (h.x + h.vx * 0.2 - this.camTarget.x) * (1 - Math.exp(-6 * dt));
       this.camTarget.z += (h.z + h.vz * 0.2 - this.camTarget.z) * (1 - Math.exp(-6 * dt));
@@ -389,11 +529,11 @@ export class GameRenderer {
     const fog = this.scene.fog as THREE.Fog | null;
     if (fog) {
       fog.near = d * 1.6;
-      fog.far = d * 4.5 + 60;
+      fog.far = d * 4.5 + 60 * world.affine;
     }
 
     // Shadow frustum follows the view.
-    const ext = d * 1.25 + 10;
+    const ext = d * 1.25 + 10 * world.affine;
     const cam = this.sun.shadow.camera;
     cam.left = -ext;
     cam.right = ext;

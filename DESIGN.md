@@ -248,6 +248,70 @@ level, about 9%), and since its reach and pull follow the radius it adds less at
 The longest stretch without eating anything is 8 s (`--human`). Like the main sim, these times are
 a lower bound for real players.
 
+## Cosmos
+
+The third mode behind the Classic / Tour / Cosmos switch, there from the first launch: one run
+from smaller than a quark to eating the Milky Way, through nine scales ("realms", `REALMS` in
+`src/config/cosmos.ts`): Quantum Foam, Atomic, Molecular, Microbial, Garden, Hometown, Planet
+Earth, Solar System and Milky Way. Like the Tour it uses the base hole, with no timer, cash, shop,
+abilities, helpers, golden props or random events, and books nothing into the main game. Unlike the
+Tour there is no catch-up growth: the hole grows only by eating. There are no checkpoints either:
+leaving ends the journey, and the next one starts from a quark.
+
+- **One size band per realm.** Every realm plays size levels 3 to 18 (the first 0 to 16) on a
+  200-unit map, laid out by size level rather than by metres (`fillTiers`,
+  `src/core/mapgen/cosmos/kit.ts`): each tier names a prop type and the levels it fills, and every
+  prop is scaled to become edible exactly at its level. A realm's top tier (levels 19-20, which
+  cannot be eaten before its goal) is the next realm's bottom tier: the same types at a smaller
+  scale. Real sizes are labels only, log-interpolated over each realm's range (`realSize`), so the
+  HUD reads from attometres to light years.
+- **The flip.** At a realm's goal the world shrinks by `z = 1.125^(start' - goal)` around the old
+  origin, which lands on the next realm's start (`World.rebase`, `flipScale` in `core/cosmos.ts`).
+  Everything stays the same object (falling props keep falling, the combo keeps going) and the
+  renderer rescales its camera, particles and dash rings the same way (`GameRenderer.rebase`), so
+  the frame after the flip looks exactly like the one before. Leftovers become crumbs: they stay
+  edible, give next to no growth, and are dropped at the following flip. The size formulas'
+  constant terms (hole speed, camera distance, hole wall, magnet, flee and fall) are multiplied by
+  `World.affine`, which drops to z at the flip and eases back to 1: the camera pulls out about 2x
+  and the hole speeds up together, smoothly. The new realm's props grow in behind a ring that
+  sweeps out from the hole, sky, fog and lights blend over 2.5 s, and the old realm's ground blends
+  into the new one over 6 s. The next realm's map and models are built ahead during idle frames.
+- **Safety net.** A realm can never soft-lock: if what is left could not take the hole to the goal
+  for 20 s, it flips anyway (`checkReachGoal`). The tests keep every realm reachable to its goal + 2
+  from its start, and `npm run sim:cosmos` reports any safety flip (target: none).
+- **Finale.** The Milky Way's goal ends the run: everything falls into the hole, which swells, the
+  galaxy's ground spirals in, then a flash, the "whole galaxy" screen and the results (time in each
+  realm, furthest realm, records). The first finish grants the Galaxy Gulper trophy and the Big Bang
+  skin. Records live in `save.cosmos` (best time, furthest realm, runs, completions).
+- **Pacing.** The built-in magnet is 1.5 levels and the hole 25% faster than the Tour's base hole
+  (`COSMOS`): a realm flips with roughly half of it eaten, so the hole sweeps up most of each scale.
+
+`npm run sim:cosmos` plays the journey with the sim's player models and flips for real
+(`--realm <id>` plays one realm from its start, `--static` lists props per size level);
+`node scripts/cosmos-shots.mjs [realmId...]` screenshots each realm at its start, mid-way, near its
+goal and after its flip.
+
+`npm run sim:cosmos -- --seeds 1-5` and `-- --good --seeds 1-5`, median (min-max). "Eaten at flip"
+is the share, by ground area, of the realm's props that fit by its goal (the bridge tier cannot be
+eaten before the flip):
+
+| Realm | Time (`--human`) | Eaten at flip | Time (`--good`) | Eaten at flip |
+|---|---|---|---|---|
+| Quantum Foam | 2:28 (2:14-2:57) | 41% | 2:04 (1:58-2:13) | 42% |
+| Atomic | 2:24 (2:14-2:48) | 44% | 2:08 (1:48-2:12) | 44% |
+| Molecular | 2:25 (2:01-2:31) | 48% | 1:44 (1:31-1:51) | 46% |
+| Microbial | 1:55 (1:49-2:19) | 42% | 1:49 (1:35-2:08) | 45% |
+| Garden | 1:58 (1:44-2:17) | 42% | 1:55 (1:25-2:03) | 44% |
+| Hometown | 2:08 (2:01-2:21) | 55% | 1:45 (1:43-1:56) | 56% |
+| Planet Earth | 2:13 (1:59-2:29) | 52% | 1:31 (1:31-1:46) | 50% |
+| Solar System | 1:55 (1:47-2:19) | 52% | 1:46 (1:33-1:52) | 53% |
+| Milky Way | 2:04 (1:54-2:46) | 47% | 1:49 (1:40-2:33) | 50% |
+| Whole journey | 19:04 (18:44-21:08) | | 16:50 (15:23-17:22) | |
+
+The longest stretch without eating is 7.4 s (`--human`), and no realm needed the safety net. Targets:
+1:15-3:30 per realm, 40-75% eaten at the flip, at most 8 s dry, a journey of 15-25 minutes. Hometown
+has no people or dogs: placed by size level, they would stand taller than its houses.
+
 ## Singularity (prestige)
 
 - Available once Downtown is unlocked in the run.
@@ -288,10 +352,12 @@ Singularity (recent income starts low again). Time with the tab hidden counts th
 
 ## Gulpedia & trophies
 
-- Gulpedia: all 124 prop types with 3D thumbnails, discovered on first swallow, lifetime counts.
+- Gulpedia: all 124 classic prop types with 3D thumbnails, discovered on first swallow, lifetime
+  counts. Cosmos props are not in it.
   11 sets (Street, Nature, People & Pets, Park, Vehicles, Buildings, Farm, Harbor, Airport,
   Spaceport, Moon); each completed set gives +5% cash.
-- 42 trophies, each +2% cash; seven also unlock skins (four of them for Singularity tiers).
+- 43 trophies, each +2% cash; eight also unlock skins (four of them for Singularity tiers, one for
+  finishing Cosmos).
 
 ## Pacing (from `npm run sim -- --human --runs 6 --seeds 1-10`, and `--good`)
 
@@ -368,7 +434,8 @@ the radius x3.25–4.11 (target x4; short late runs start close to each map's si
 
 ```
 src/
-  config/      balance.ts (economy numbers), objects.ts (prop catalogue: 124 types)
+  config/      balance.ts (economy numbers), objects.ts (prop catalogue: 124 classic types plus the
+               Cosmos props from cosmos/<realm>.ts), cosmos.ts (realms and COSMOS tuning)
   core/        pure logic, no DOM/three — runs headless in tests and the sim
     format.ts      number formatting (K, M, B, T, Qa, Qi, scientific)
     economy.ts     costs, effects, map unlocks, map max sizes, offline, prestige and tiers,
@@ -377,12 +444,13 @@ src/
     save.ts        versioned save, migration, defaults
     round.ts       settleRound: books a finished round into the save (game and sim share it)
     tour.ts        casual Tour: round config, map chain, stars, settleTour
+    cosmos.ts      Cosmos: realm config, the flip (flipScale), size number and real size, settleCosmos
     world.ts       round simulation: holes, swallowing, movers, combo, abilities, early finish
     roundEvents.ts rush hour, UFO fly-by and stampede (staged off-stage, run one at a time)
     traffic.ts     road vehicles slow for the vehicle ahead and take turns at junctions
                    (each looks 10x a second, not every frame)
     mapgen/        seeded procedural maps (builder + one generator per map, ladder.ts fills
-                   size-ladder gaps)
+                   size-ladder gaps; cosmos/ has one generator per realm on a tier kit)
     bot.ts         greedy steering (sim + hub attract mode)
     spatial.ts     uniform hash grid
     achievements.ts

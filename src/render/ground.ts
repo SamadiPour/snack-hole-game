@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { MapData, Paint } from '../core/mapgen/builder';
-import { applyHoleCut } from './materials';
+import { applyHoleCut, type GroundBlend } from './materials';
 
 /**
  * Ground = one flat mesh of painted shapes (roads, lawns, water...) drawn in array order with
@@ -11,9 +11,15 @@ import { applyHoleCut } from './materials';
 export class Ground {
   readonly group = new THREE.Group();
   private decal: THREE.Mesh;
-  private depth: THREE.Mesh;
+  private depth: THREE.Mesh | null = null;
+  private blend: GroundBlend | null = null;
 
-  constructor(map: MapData) {
+  /**
+   * `nest`: the ground of the Cosmos realm just left, kept for a while where it landed in the new
+   * one. It has no apron (3x the map, it would paint over the new realm) and no depth plane (the
+   * new ground's covers it), draws over the new ground and blends into `nest.color` (setBlend).
+   */
+  constructor(map: MapData, nest?: { color: string }) {
     const pos: number[] = [];
     const col: number[] = [];
     const c = new THREE.Color();
@@ -66,7 +72,7 @@ export class Ground {
     c.set(map.outside);
     const out = map.size * 3;
     const band = out - map.half + 1;
-    for (const k of [-1, 1]) {
+    for (const k of nest ? [] : [-1, 1]) {
       rect(0, k * (out - band / 2), out * 2, band);
       rect(k * (out - band / 2), 0, band, out * 2);
     }
@@ -83,11 +89,15 @@ export class Ground {
     geo.computeBoundingSphere();
 
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true, depthWrite: false });
-    applyHoleCut(mat);
+    if (nest) this.blend = { amount: { value: 0 }, color: { value: new THREE.Color(nest.color) } };
+    applyHoleCut(mat, this.blend ?? undefined);
     this.decal = new THREE.Mesh(geo, mat);
     this.decal.receiveShadow = true;
-    this.decal.renderOrder = -2;
+    // A nest draws after the new realm's ground, before the depth plane.
+    this.decal.renderOrder = nest ? -1.5 : -2;
     this.decal.frustumCulled = false;
+    this.group.add(this.decal);
+    if (nest) return;
 
     const depthMat = new THREE.MeshBasicMaterial({ colorWrite: false });
     applyHoleCut(depthMat);
@@ -96,12 +106,17 @@ export class Ground {
     this.depth = new THREE.Mesh(plane, depthMat);
     this.depth.renderOrder = -1;
     this.depth.frustumCulled = false;
+    this.group.add(this.depth);
+  }
 
-    this.group.add(this.decal, this.depth);
+  /** Nest only: 0 shows the old realm's ground, 1 is all the new realm's base colour. */
+  setBlend(v: number): void {
+    if (this.blend) this.blend.amount.value = v;
   }
 
   dispose(): void {
     for (const m of [this.decal, this.depth]) {
+      if (!m) continue;
       m.geometry.dispose();
       (m.material as THREE.Material).dispose();
     }

@@ -157,6 +157,33 @@ async function run(viewport, prefix) {
     if (!(dm >= 10)) errors.push('prestige did not grant DM');
     await page.screenshot({ path: `screenshots/${prefix}-08-after-prestige.png` });
   }
+
+  // Cosmos: start a journey, flip into the next realm, end the journey.
+  if (await page.evaluate(() => window.game.debugState.state === 'round')) {
+    await page.evaluate(() => {
+      window.game.debugState.world.timeLeft = 0.01;
+    });
+    await page.waitForFunction(() => window.game.debugState.state === 'results', null, { timeout: 30000 });
+    await page.click('.results-modal .btn.primary');
+    await page.waitForTimeout(500);
+  }
+  await page.evaluate(() => {
+    window.game.setMode('cosmos');
+    window.game.play();
+  });
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.game.cosmosSkip());
+  await page.waitForFunction(() => window.game.debugState.world.cfg.cosmos?.realm === 1, null, { timeout: 10000 });
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `screenshots/${prefix}-09-cosmos.png` });
+  await page.evaluate(() => {
+    window.game.debugState.world.timeLeft = 0.01;
+  });
+  await page.waitForFunction(() => window.game.debugState.state === 'results', null, { timeout: 30000 });
+  const runs = await page.evaluate(() => window.game.debugState.save.cosmos.runs);
+  if (runs !== 1) errors.push(`cosmos run not booked (runs ${runs})`);
+  await page.click('.results-modal .btn.ghost');
+  console.log(prefix, 'cosmos journey ok');
   await ctx.close();
 }
 

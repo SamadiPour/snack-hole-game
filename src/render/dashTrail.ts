@@ -64,6 +64,17 @@ export class DashTrail {
     this.emit(x, z, r * 0.9, r * 1.8 + 1, 0.3, 0.8, '#ffffff');
   }
 
+  /** Cosmos flip: rings shrink by `k` around the old origin, which lands on (nx, nz). */
+  rebase(k: number, nx: number, nz: number): void {
+    this.lastX = nx + this.lastX * k;
+    this.lastZ = nz + this.lastZ * k;
+    for (const e of this.echoes) {
+      e.mesh.position.set(nx + e.mesh.position.x * k, e.mesh.position.y, nz + e.mesh.position.z * k);
+      e.r0 *= k;
+      e.r1 *= k;
+    }
+  }
+
   update(dt: number, x: number, z: number, r: number, dashing: boolean, color: string): void {
     if (dashing) {
       // Drop an echo every ~half a radius of travel (and at least every 40 ms).

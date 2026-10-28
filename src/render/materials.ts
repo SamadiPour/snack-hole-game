@@ -19,8 +19,14 @@ const CUT_FRAG = /* glsl */ `
   }
 `;
 
-/** Patches a ground material so it is cut open wherever a hole is. */
-export function applyHoleCut(mat: THREE.Material): void {
+/** Mixes a ground's colours toward `color` by `amount` (0..1): the old Cosmos realm fading into the new one. */
+export interface GroundBlend {
+  amount: { value: number };
+  color: { value: THREE.Color };
+}
+
+/** Patches a ground material so it is cut open wherever a hole is (and blended, with `blend`). */
+export function applyHoleCut(mat: THREE.Material, blend?: GroundBlend): void {
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uHoles = holeUniforms.uHoles;
     shader.uniforms.uHoleCount = holeUniforms.uHoleCount;
@@ -30,11 +36,16 @@ export function applyHoleCut(mat: THREE.Material): void {
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
-        `#include <common>\nvarying vec3 vHHWorld;\nuniform vec4 uHoles[${MAX_HOLES}];\nuniform int uHoleCount;`,
+        `#include <common>\nvarying vec3 vHHWorld;\nuniform vec4 uHoles[${MAX_HOLES}];\nuniform int uHoleCount;${blend ? '\nuniform float uBlend;\nuniform vec3 uBlendColor;' : ''}`,
       )
       .replace('void main() {', 'void main() {\n' + CUT_FRAG);
+    if (blend) {
+      shader.uniforms.uBlend = blend.amount;
+      shader.uniforms.uBlendColor = blend.color;
+      shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = mix( diffuseColor.rgb, uBlendColor, uBlend );');
+    }
   };
-  mat.customProgramCacheKey = () => 'holecut';
+  mat.customProgramCacheKey = () => (blend ? 'holecut-blend' : 'holecut');
 }
 
 /**
@@ -42,9 +53,9 @@ export function applyHoleCut(mat: THREE.Material): void {
  * only to parts flagged `tintable`, and darkening as things sink into a hole. `gold` makes the
  * golden-prop variant (whole prop gold with a moving glint).
  */
-export function createPropMaterial(gold = false): THREE.MeshLambertMaterial {
+export function createPropMaterial(gold = false, glow = false): THREE.MeshLambertMaterial {
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-  patchPropShader(mat, gold ? 'prop-gold' : 'prop', { gold: gold ? { value: 1 } : undefined });
+  patchPropShader(mat, gold ? 'prop-gold' : glow ? 'prop-glow' : 'prop', { gold: gold ? { value: 1 } : undefined, glow });
   return mat;
 }
 
@@ -61,8 +72,8 @@ export function createGhostMaterial(): { mat: THREE.MeshLambertMaterial; tint: T
   return { mat, tint, gold };
 }
 
-function patchPropShader(mat: THREE.MeshLambertMaterial, key: string, opts: { tint?: THREE.Color; gold?: { value: number } }): void {
-  const { tint, gold } = opts;
+function patchPropShader(mat: THREE.MeshLambertMaterial, key: string, opts: { tint?: THREE.Color; gold?: { value: number }; glow?: boolean }): void {
+  const { tint, gold, glow } = opts;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uFadeDepth = holeUniforms.uFadeDepth;
     if (tint) shader.uniforms.uTint = { value: tint };
@@ -110,7 +121,7 @@ ${gold ? '  if ( uGold > 0.5 ) { float gl = dot( vColor.rgb, vec3( 0.299, 0.587,
       .replace('#include <common>', `#include <common>\nvarying float vHHY;\nuniform float uFadeDepth;${gold ? '\nuniform float uGold;\nuniform float uTime;\nvarying vec3 vHHP;' : ''}`)
       .replace(
         '#include <opaque_fragment>',
-        `${glint}outgoingLight *= clamp( 1.0 + vHHY / uFadeDepth, 0.0, 1.0 );\n#include <opaque_fragment>`,
+        `${glint}${glow ? 'outgoingLight = mix( outgoingLight, diffuseColor.rgb * 1.1, 0.7 );\n' : ''}outgoingLight *= clamp( 1.0 + vHHY / uFadeDepth, 0.0, 1.0 );\n#include <opaque_fragment>`,
       );
   };
   mat.customProgramCacheKey = () => key;

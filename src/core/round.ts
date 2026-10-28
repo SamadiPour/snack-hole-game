@@ -43,9 +43,10 @@ export interface RoundSettlement {
   unlockedMaps: MapId[];
 }
 
+/** Classic and Tour rounds only: a Cosmos run settles through settleCosmos (core/cosmos.ts). */
 export function summarizeRound(w: World): RoundSummary {
   return {
-    mapId: w.cfg.mapId,
+    mapId: w.cfg.mapId as MapId,
     cash: w.cash,
     eaten: w.eaten + w.helperEaten,
     comboBest: w.comboBest,
